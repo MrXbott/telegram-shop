@@ -1,26 +1,37 @@
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
-from sqlalchemy.orm import relationship
+from sqlalchemy import Integer, String, ForeignKey, Boolean
+from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
+from typing import List
 
 
-Base = declarative_base()
+class Base(DeclarativeBase): 
+    pass
+
 
 class User(Base):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True, autoincrement=False)  # Telegram user ID
-    name = Column(String)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)  # Telegram user ID
+    name: Mapped[str] = mapped_column(String)
+
+    cart_items: Mapped[List['CartItem']] = relationship(back_populates='user')
+
 
 class Product(Base):
     __tablename__ = 'products'
-    id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    price = Column(Integer, nullable=False)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    price: Mapped[int] = mapped_column(Integer, nullable=False)
+
 
 class CartItem(Base):
     __tablename__ = 'cart_items'
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'))
-    product_id = Column(Integer, ForeignKey('products.id'))
 
-    user = relationship('User')
-    product = relationship('Product')
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'))
+    product_id: Mapped[int] = mapped_column(Integer, ForeignKey('products.id'))
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+
+    user: Mapped[User] = relationship(back_populates='cart_items')
+    product: Mapped[Product] = relationship()
+    
