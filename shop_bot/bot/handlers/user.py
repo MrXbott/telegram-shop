@@ -1,9 +1,10 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from db import crud
+from db.redis import redis_client
 from keyboards.user_kb import catalog_keyboard, product_keyboard, cart_keyboard, main_keyboard
 from texts import product_text, cart_text
-
+import cart
 
 router = Router()
 
@@ -21,11 +22,11 @@ async def show_catalog(message: Message):
 
 @router.message(F.text.in_(['/cart', '🛒 Корзина']))
 async def show_cart(message: Message):
-    items = await crud.get_cart(message.from_user.id)
-    if not items:
+    products = await cart.get_cart(message.from_user.id)
+    if not products:
         await message.answer('Корзина пуста.')
         return
-    await message.answer(cart_text(items), reply_markup=cart_keyboard())
+    await message.answer(cart_text(products), reply_markup=cart_keyboard())
 
 
 @router.message(F.text == '📦 Мои заказы')
@@ -61,7 +62,8 @@ async def show_product(callback: CallbackQuery):
 @router.callback_query(F.data.startswith('add_'))
 async def add_to_cart(callback: CallbackQuery):
     product_id = int(callback.data.split('_')[1])
-    await crud.add_to_cart(callback.from_user.id, product_id)
+    user_id = callback.from_user.id
+    await cart.add_to_cart(user_id, product_id, 1)
     await callback.answer('Добавлено в корзину')
 
 
@@ -76,5 +78,5 @@ async def back_to_catalog(callback: CallbackQuery):
 
 @router.callback_query(F.data == 'clear_cart')
 async def clear_cart(callback: CallbackQuery):
-    await crud.clear_cart(callback.from_user.id)
+    await cart.clear_cart(callback.from_user.id)
     await callback.message.edit_text('Корзина очищена.')
