@@ -13,8 +13,16 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)  # Telegram user ID
     name: Mapped[str] = mapped_column(String)
 
-    # cart_items: Mapped[List['CartItem']] = relationship(back_populates='user')
 
+
+class Category(Base):
+    __tablename__ = 'categories'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+
+    products: Mapped[list['Product']] = relationship(back_populates='category')
+    
 
 class Product(Base):
     __tablename__ = 'products'
@@ -22,16 +30,9 @@ class Product(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     price: Mapped[int] = mapped_column(Integer, nullable=False)
+    category_id: Mapped[int] = mapped_column(Integer, ForeignKey('categories.id'), nullable=False)
+
+    category: Mapped['Category'] = relationship(back_populates='products')
 
 
-# class CartItem(Base):
-#     __tablename__ = 'cart_items'
-
-#     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-#     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'))
-#     product_id: Mapped[int] = mapped_column(Integer, ForeignKey('products.id'))
-#     quantity: Mapped[int] = mapped_column(Integer, default=1)
-
-#     user: Mapped[User] = relationship(back_populates='cart_items')
-#     product: Mapped[Product] = relationship()
     
