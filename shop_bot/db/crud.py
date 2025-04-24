@@ -31,7 +31,7 @@ async def clear_cart(user_id: int):
         await session.execute(delete(CartItem).where(CartItem.user_id == user_id))
         await session.commit()
 
-async def create_product(name: str, price: int):
+async def add_product(name: str, price: int):
     async with async_session() as session:
         session.add(Product(name=name, price=price))
         await session.commit()

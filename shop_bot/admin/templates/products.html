@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Продукты</title>
+</head>
+<body>
+    <h1>Список продуктов</h1>
+    <ul>
+        {% for p in products %}
+        <li>{{ p.name }} — {{ p.price }} ₽</li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('add_product') }}">➕ Добавить продукт</a>
+</body>
+</html>

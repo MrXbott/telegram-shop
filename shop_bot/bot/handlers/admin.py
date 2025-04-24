@@ -44,6 +44,6 @@ async def add_product_price(message: Message, state: FSMContext):
 
     data = await state.get_data()
     name = data['name']
-    await crud.create_product(name, price)
+    await crud.add_product(name, price)
     await message.answer(f'Товар <b>{name}</b> за <b>{price}₽</b> добавлен в каталог.')
     await state.clear()
