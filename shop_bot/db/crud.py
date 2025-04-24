@@ -31,7 +31,7 @@ async def get_product(product_id: int) -> Product:
                                     .where(Product.id == product_id)
                                     .options(selectinload(Product.category))
                                     )
-        return product
+        return product.scalar_one_or_none() 
     
 async def get_products_by_ids(product_ids: List[int]):
     async with async_session() as session:
@@ -45,6 +45,12 @@ async def add_product(name: str, price: int):
     async with async_session() as session:
         session.add(Product(name=name, price=price))
         await session.commit()
+
+
+async def get_categories():
+    async with async_session() as session:
+        result = await session.execute(select(Category))
+    return result.scalars().all()
 
 async def get_category_with_products(category_id: int):
     async with async_session() as session:
