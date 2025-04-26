@@ -6,6 +6,11 @@
 <body>
     <h1>Новый продукт</h1>
     <form method="post">
+        <select id="category" name="category" required>
+            {% for category in categories %}
+                <option value="{{ category.id }}">{{ category.name }}</option>
+            {% endfor %}
+        </select><br>
         <input type="text" name="name" placeholder="Название" required><br>
         <input type="number" name="price" placeholder="Цена" required><br>
         <button type="submit">Добавить</button>

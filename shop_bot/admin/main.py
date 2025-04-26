@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from sqlalchemy.exc import SQLAlchemyError
-from db.models import Product
+from db.models import Product, Category
 from db.init import sync_session
 
 
@@ -21,19 +21,21 @@ def product_list():
 
 @app.route('/products/add', methods=['GET', 'POST'])
 def add_product():
-    if request.method == 'POST':
-        form = request.form
-        try:
-            with sync_session() as session:
-                product = Product(name=form['name'], price=int(form['price']))
+    with sync_session() as session:
+        if request.method == 'POST':
+            form = request.form
+            try:
+                product = Product(name=form['name'], price=int(form['price']), category_id=int(form['category']))
                 session.add(product)
                 session.commit()
-        except SQLAlchemyError as e:
-            print(f'Error adding product: {e}')
-            # Можно добавить обработку ошибок и откат транзакции
-        return redirect(url_for('product_list'))
-
-    return render_template('add_product.html')
+            except SQLAlchemyError as e:
+                # Можно добавить обработку ошибок и откат транзакции
+                print(f'Error adding product: {e}')
+                
+            return redirect(url_for('product_list'))
+        
+        categories = session.query(Category).all()
+        return render_template('add_product.html', categories=categories)
 
 
 if __name__ == '__main__':
