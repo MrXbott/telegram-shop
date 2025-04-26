@@ -3,6 +3,7 @@ import sys
 import time
 import subprocess
 from dotenv import load_dotenv
+from datetime import datetime
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -19,12 +20,12 @@ class RestartOnChangeHandler(FileSystemEventHandler):
         self.process = self.run_script()
 
     def run_script(self):
-        print(f'🚀 Запуск: python {self.script_name}')
+        print(f'🚀 {datetime.now().strftime('%d.%m.%Y %H:%M:%S')} Запуск: python {self.script_name}')
         return subprocess.Popen([sys.executable, self.script_name])
 
     def on_any_event(self, event):
         if event.src_path.endswith('.py'):
-            print(f'🔄 Изменение обнаружено: {event.src_path}, перезапускаем...')
+            print(f'🔄 {datetime.now().strftime('%d.%m.%Y %H:%M:%S')} Изменение обнаружено: {event.src_path}, перезапуск...')
             self.process.terminate()
             self.process.wait()
             self.process = self.run_script()
