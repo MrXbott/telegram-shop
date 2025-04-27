@@ -5,14 +5,19 @@
 </head>
 <body>
     <h1>Новый продукт</h1>
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <select id="category" name="category" required>
             {% for category in categories %}
                 <option value="{{ category.id }}">{{ category.name }}</option>
             {% endfor %}
-        </select><br>
-        <input type="text" name="name" placeholder="Название" required><br>
-        <input type="number" name="price" placeholder="Цена" required><br>
+        </select>
+        <br>
+        <input type="text" name="name" placeholder="Название" required>
+        <br>
+        <input type="number" name="price" placeholder="Цена" required>
+        <br>
+        <input type="file" id="image" name="image">
+        <br>
         <button type="submit">Добавить</button>
     </form>
 </body>
