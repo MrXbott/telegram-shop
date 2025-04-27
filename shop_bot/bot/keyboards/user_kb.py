@@ -28,13 +28,26 @@ def products_keyboard(products: List[Product]):
             ]
     )
 
-def product_keyboard(product: Product):
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text='🛒 Добавить в корзину', callback_data=f'add_{product.id}')],
-            [InlineKeyboardButton(text='⬅️ Назад', callback_data=f'category_{product.category_id}')]
-        ]
-    )
+def product_keyboard(product: Product, quantity: int = 0):
+    if quantity > 0:
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(text='➖', callback_data=f'decrease_{product.id}'),
+                    InlineKeyboardButton(text=f'{quantity}', callback_data='ignore'),
+                    InlineKeyboardButton(text='➕', callback_data=f'increase_{product.id}')
+                ],
+                [InlineKeyboardButton(text='🗑️ Удалить из корзины', callback_data=f'remove_{product.id}')],
+                [InlineKeyboardButton(text='⬅️ Назад', callback_data=f'category_{product.category_id}')]
+            ]
+        )
+    else:
+        return InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text='🛒 Добавить в корзину', callback_data=f'add_{product.id}')],
+                [InlineKeyboardButton(text='⬅️ Назад', callback_data=f'category_{product.category_id}')]
+            ]
+        )
 
 def cart_keyboard():
     return InlineKeyboardMarkup(

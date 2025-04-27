@@ -81,7 +81,10 @@ async def show_products(callback: CallbackQuery):
 @router.callback_query(F.data.startswith('product_'))
 async def show_product(callback: CallbackQuery):
     product_id = int(callback.data.split('_')[1])
+    user_id = callback.from_user.id
     product = await crud.get_product(product_id)
+    quantity = await cart.get_product_quantity(user_id, product_id)
+
     if product:
         if product.image:
             photo_path = os.path.join(MEDIA_FOLDER_PATH, product.image)
@@ -93,16 +96,56 @@ async def show_product(callback: CallbackQuery):
                     media=photo,
                     caption=product_text(product) 
                 ),
-                reply_markup=kb.product_keyboard(product)
+                reply_markup=kb.product_keyboard(product, quantity)
             )
 
 @router.callback_query(F.data.startswith('add_'))
-async def add_to_cart(callback: CallbackQuery):
+async def add_product_to_cart(callback: CallbackQuery):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
-    await cart.add_to_cart(user_id, product_id, 1)
-    await callback.answer('Добавлено в корзину')
+    product = await crud.get_product(product_id)
+    if product:
+        await cart.add_to_cart(user_id, product_id, 1)
+        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, 1))
+        await callback.answer('Добавлено в корзину')
+    
 
+@router.callback_query(F.data.startswith('increase_'))
+async def increase_product_quantity(callback: CallbackQuery):
+    product_id = int(callback.data.split('_')[1])
+    user_id = callback.from_user.id
+    await cart.increase_quantity(user_id, product_id)
+    quantity = await cart.get_product_quantity(user_id, product_id)
+    product = await crud.get_product(product_id)
+    if product:
+        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, quantity))
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith('decrease_'))
+async def decrease_product_quantity(callback: CallbackQuery):
+    product_id = int(callback.data.split('_')[1])
+    user_id = callback.from_user.id
+    await cart.decrease_quantity(user_id, product_id)
+    product = await crud.get_product(product_id)
+    quantity = await cart.get_product_quantity(user_id, product_id)
+    if product:
+        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, quantity))
+    await callback.answer()
+
+@router.callback_query(F.data.startswith('remove_'))
+async def remove_from_cart_handler(callback: CallbackQuery):
+    product_id = int(callback.data.split('_')[1])
+    user_id = callback.from_user.id
+    await cart.remove_from_cart(user_id, product_id)
+    product = await crud.get_product(product_id)
+    if product:
+        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, quantity=0))
+    await callback.answer('Удалено из корзины!')
+
+@router.callback_query(F.data == 'ignore')
+async def ignore_callback(callback: CallbackQuery):
+    await callback.answer()
 
 @router.callback_query(F.data == 'back_to_catalog')
 async def back_to_catalog(callback: CallbackQuery):
