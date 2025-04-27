@@ -1,9 +1,13 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InputMediaPhoto, FSInputFile, ContentType
+import os
+
 from db import crud
 import keyboards.user_kb as kb
 from texts import product_text, cart_text
+from config import MEDIA_FOLDER_PATH
 import cart
+
 
 router = Router()
 
@@ -62,7 +66,14 @@ async def contact_support(message: Message):
 async def show_products(callback: CallbackQuery):
     category_id = int(callback.data.split('_')[1])
     category = await crud.get_category_with_products(category_id)
-    await callback.message.edit_text(f'Товары в категории {category.name}', 
+    
+    if callback.message.content_type == ContentType.TEXT:
+        await callback.message.edit_text(f'Товары в категории {category.name}', 
+                                     reply_markup=kb.products_keyboard(category.products)
+                                     )
+    elif callback.message.content_type == ContentType.PHOTO:
+            await callback.message.delete()
+            await callback.message.answer(f'Товары в категории {category.name}', 
                                      reply_markup=kb.products_keyboard(category.products)
                                      )
 
@@ -72,9 +83,18 @@ async def show_product(callback: CallbackQuery):
     product_id = int(callback.data.split('_')[1])
     product = await crud.get_product(product_id)
     if product:
-        await callback.message.edit_text(product_text(product), 
-                                         reply_markup=kb.product_keyboard(product)
-                                         )
+        if product.image:
+            photo_path = os.path.join(MEDIA_FOLDER_PATH, product.image)
+        else:
+            photo_path = os.path.join(MEDIA_FOLDER_PATH, 'no_photo.png')
+        photo = FSInputFile(photo_path)
+        await callback.message.edit_media(
+                media=InputMediaPhoto(
+                    media=photo,
+                    caption=product_text(product) 
+                ),
+                reply_markup=kb.product_keyboard(product)
+            )
 
 @router.callback_query(F.data.startswith('add_'))
 async def add_to_cart(callback: CallbackQuery):
