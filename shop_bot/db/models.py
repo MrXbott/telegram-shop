@@ -43,5 +43,5 @@ class Favorite(Base):
     user_id: Mapped[int] = mapped_column(Integer, nullable=False)
     product_id: Mapped[int] = mapped_column(Integer, ForeignKey('products.id'), nullable=False)
 
-    product: Mapped[Product] = relationship(back_populates='products', lazy='joined')
+    product: Mapped[Product] = relationship(Product, lazy='joined')
     
