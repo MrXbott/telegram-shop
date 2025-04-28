@@ -9,6 +9,6 @@ from db import crud, cart
 router = Router()
 
 
-@router.message(F.text == '💬 Поддержка')
+@router.message(F.text.in_(['/help', '💬 Поддержка']))
 async def contact_support(message: Message):
     await message.answer('Здесь будут способы связи с поддержкой.')

@@ -8,6 +8,6 @@ from db import crud, cart
 router = Router()
 
 
-@router.message(F.text == '🏠 Мои адреса')
+@router.message(F.text.in_(['/addresses', '🏠 Мои адреса']))
 async def show_addresses(message: Message):
     await message.answer('Здесь будут ваши адреса.')

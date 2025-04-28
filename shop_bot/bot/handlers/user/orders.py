@@ -9,6 +9,6 @@ from db import crud, cart
 router = Router()
 
 
-@router.message(F.text == '📦 Мои заказы')
+@router.message(F.text.in_(['/orders', '📦 Мои заказы']))
 async def show_orders(message: Message):
     await message.answer('Здесь будут ваши заказы.')
