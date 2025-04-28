@@ -36,4 +36,12 @@ class Product(Base):
     category: Mapped['Category'] = relationship(back_populates='products')
 
 
+class Favorite(Base):
+    __tablename__ = 'favorites'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    product_id: Mapped[int] = mapped_column(Integer, ForeignKey('products.id'), nullable=False)
+
+    product: Mapped[Product] = relationship(back_populates='products', lazy='joined')
     
