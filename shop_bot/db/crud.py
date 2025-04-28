@@ -3,10 +3,10 @@ from sqlalchemy.orm import joinedload, selectinload
 from typing import List
 
 from db.init import async_session
-from db.models import User, Product, Category
+from db.models import User, Product, Category, Favorite
 
 
-async def get_or_create_user(user_id: int, name: str):
+async def get_or_create_user(user_id: int, name: str) -> User:
     async with async_session() as session:
         user = await session.get(User, user_id)
         if not user:
@@ -16,7 +16,7 @@ async def get_or_create_user(user_id: int, name: str):
         return user
 
     
-async def get_all_products():
+async def get_all_products() -> List[Product]:
     async with async_session() as session:
         result = await session.execute(
                                 select(Product)
@@ -33,7 +33,7 @@ async def get_product(product_id: int) -> Product:
                                     )
         return product.scalar_one_or_none() 
     
-async def get_products_by_ids(product_ids: List[int]):
+async def get_products_by_ids(product_ids: List[int]) -> List[Product]:
     async with async_session() as session:
         result = await session.execute(
                                 select(Product)
@@ -41,18 +41,19 @@ async def get_products_by_ids(product_ids: List[int]):
                                 )
     return result.scalars().all()
 
-async def add_product(name: str, price: int):
+async def add_product(name: str, price: int) -> None:
     async with async_session() as session:
         session.add(Product(name=name, price=price))
         await session.commit()
 
 
-async def get_categories():
+async def get_categories() -> List[Category]:
     async with async_session() as session:
         result = await session.execute(select(Category))
     return result.scalars().all()
 
-async def get_category_with_products(category_id: int):
+
+async def get_category_with_products(category_id: int) -> Category:
     async with async_session() as session:
         result = await session.execute(
                                 select(Category)
@@ -61,3 +62,34 @@ async def get_category_with_products(category_id: int):
                             )
         category = result.scalar_one()
         return category
+    
+
+async def add_to_favorites(user_id: int, product_id: int) -> None:
+    async with async_session() as session:
+        favorite = Favorite(user_id=user_id, product_id=product_id)
+        session.add(favorite)
+        await session.commit()
+
+
+async def remove_from_favorites(user_id: int, product_id: int) -> None:
+    async with async_session() as session:
+        await session.execute(
+                        delete(Favorite)
+                        .where(Favorite.user_id == user_id, Favorite.product_id == product_id))
+        await session.commit()
+
+
+async def is_in_favorites(user_id: int, product_id: int) -> bool:
+    async with async_session() as session:
+        result = await session.execute(
+                                select(Favorite)
+                                .where(Favorite.user_id == user_id, Favorite.product_id == product_id))
+        return result.scalar_one_or_none() is not None
+    
+
+async def get_user_favorites(user_id: int) -> List[Favorite]:
+    async with async_session() as session:
+        result = await session.execute(
+                                select(Favorite)
+                                .where(Favorite.user_id == user_id))
+        return result.scalars().all()

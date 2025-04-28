@@ -42,6 +42,16 @@ async def show_cart(message: Message):
     await message.answer(cart_text(products), reply_markup=kb.cart_keyboard())
 
 
+@router.message(F.text.in_(['/favorites', '⭐ Избранное']))
+async def show_favorites(message: Message):
+    user_id = message.from_user.id
+    favorites = await crud.get_user_favorites(user_id)
+    if favorites:
+        await message.answer('Ваше избранное.', reply_markup=kb.favorites_keyboard(favorites))
+    else:
+        await message.answer('В избранном пока ничего нет. Добавьте что нравится.')
+
+
 @router.message(F.text == '📦 Мои заказы')
 async def show_orders(message: Message):
     await message.answer('Здесь будут ваши заказы.')
@@ -84,6 +94,7 @@ async def show_product(callback: CallbackQuery):
     user_id = callback.from_user.id
     product = await crud.get_product(product_id)
     quantity = await cart.get_product_quantity(user_id, product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
 
     if product:
         if product.image:
@@ -96,7 +107,7 @@ async def show_product(callback: CallbackQuery):
                     media=photo,
                     caption=product_text(product) 
                 ),
-                reply_markup=kb.product_keyboard(product, quantity)
+                reply_markup=kb.product_keyboard(product, is_favorite, quantity)
             )
 
 @router.callback_query(F.data.startswith('add_'))
@@ -104,9 +115,10 @@ async def add_product_to_cart(callback: CallbackQuery):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
     product = await crud.get_product(product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
     if product:
         await cart.add_to_cart(user_id, product_id, 1)
-        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, 1))
+        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, 1))
         await callback.answer('Добавлено в корзину')
     
 
@@ -117,8 +129,9 @@ async def increase_product_quantity(callback: CallbackQuery):
     await cart.increase_quantity(user_id, product_id)
     quantity = await cart.get_product_quantity(user_id, product_id)
     product = await crud.get_product(product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
     if product:
-        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, quantity))
+        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, quantity))
     await callback.answer()
 
 
@@ -129,8 +142,9 @@ async def decrease_product_quantity(callback: CallbackQuery):
     await cart.decrease_quantity(user_id, product_id)
     product = await crud.get_product(product_id)
     quantity = await cart.get_product_quantity(user_id, product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
     if product:
-        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, quantity))
+        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, quantity))
     await callback.answer()
 
 @router.callback_query(F.data.startswith('remove_'))
@@ -139,8 +153,9 @@ async def remove_from_cart_handler(callback: CallbackQuery):
     user_id = callback.from_user.id
     await cart.remove_from_cart(user_id, product_id)
     product = await crud.get_product(product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
     if product:
-        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, quantity=0))
+        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, quantity=0))
     await callback.answer('Удалено из корзины!')
 
 @router.callback_query(F.data == 'ignore')
@@ -151,6 +166,21 @@ async def ignore_callback(callback: CallbackQuery):
 async def back_to_catalog(callback: CallbackQuery):
     await get_catalog(callback)
 
+
+@router.callback_query(F.data.startswith('favorites_'))
+async def add_to_favorites(callback: CallbackQuery):
+    product_id = int(callback.data.split('_')[-1])
+    user_id = callback.from_user.id
+    product = await crud.get_product(product_id)
+    quantity = await cart.get_product_quantity(user_id, product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
+    if is_favorite:
+        await crud.remove_from_favorites(user_id, product_id)
+        await callback.answer('Удалено из избранного ❌')
+    else:
+        await crud.add_to_favorites(user_id, product_id)
+        await callback.answer('Добавлено в избранное ⭐')
+    await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, (not is_favorite), quantity))
 
 @router.callback_query(F.data == 'clear_cart')
 async def clear_cart(callback: CallbackQuery):
