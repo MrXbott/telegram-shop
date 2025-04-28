@@ -1,6 +1,6 @@
 from typing import List
 from db.models import Product
-from cart import ProductInCart
+from db.cart import ProductInCart
 
 def product_text(product: Product) -> str:
     return f'<b>{product.name}</b>\nЦена: {product.price}₽'
