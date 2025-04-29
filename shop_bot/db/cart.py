@@ -28,17 +28,19 @@ async def get_product_quantity(user_id: int, product_id: int) -> int:
     return int(quantity) if quantity else 0
     
 
-async def decrease_quantity(user_id: int, product_id: int):
+async def decrease_quantity(user_id: int, product_id: int) -> int:
     key = f'cart:{user_id}'
     current_quantity = await get_product_quantity(user_id, product_id)
     if current_quantity > 1:
         await add_to_cart(user_id, product_id, quantity=-1)
     else:
         await redis_client.hdel(key, product_id)
+    return await get_product_quantity(user_id, product_id)
 
 
-async def increase_quantity(user_id: int, product_id: int):
+async def increase_quantity(user_id: int, product_id: int) -> int:
     await add_to_cart(user_id, product_id, quantity=1)
+    return await get_product_quantity(user_id, product_id)
     
 
 async def get_cart(session: AsyncSession, user_id: int) -> List[ProductInCart]:

@@ -22,11 +22,11 @@ async def get_catalog(msg: Message|CallbackQuery, session: AsyncSession):
 
 @router.message(F.text.in_(['/catalog', '🛍️ Каталог']))
 async def show_catalog(message: Message, session: AsyncSession):  
-    logger.info(f'Пользователь {message.from_user.id} вызвал команду /catalog')
     await get_catalog(message, session)
+    logger.info(f'🛍️ Пользователь {message.from_user.id} вызвал команду /catalog')
 
 
 @router.callback_query(F.data == 'back_to_catalog')
 async def back_to_catalog(callback: CallbackQuery, session: AsyncSession):
-    logger.info(f'Пользователь {callback.from_user.id} вернулся в каталог из категории')
     await get_catalog(callback, session)
+    logger.info(f'🛍️ Пользователь {callback.from_user.id} вернулся в каталог из категории')

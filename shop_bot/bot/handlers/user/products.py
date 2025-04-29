@@ -2,6 +2,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InputMediaPhoto, FSInputFile, ContentType
 import os
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 
 from config import MEDIA_FOLDER_PATH
 import keyboards.user_kb as kb
@@ -9,6 +10,7 @@ from texts import product_text
 from db import crud, cart
 
 
+logger = logging.getLogger(__name__)
 router = Router()
 
 
@@ -26,6 +28,7 @@ async def show_products(callback: CallbackQuery, session: AsyncSession):
             await callback.message.answer(f'Товары в категории {category.name}', 
                                      reply_markup=kb.products_keyboard(category.products)
                                      )
+    logger.info(f'📂 Пользователь {callback.from_user.id} просматривает товары из категории {category_id} - {category.name}')
             
 
 @router.callback_query(F.data.startswith('product_'))
@@ -49,3 +52,4 @@ async def show_product(callback: CallbackQuery, session: AsyncSession):
                 ),
                 reply_markup=kb.product_keyboard(product, is_favorite, quantity)
             )
+    logger.info(f'🍏 Пользователь {callback.from_user.id} просматривает товар {product_id} - {product.name} из категории {product.category_id} - {product.category.name}')
