@@ -4,14 +4,19 @@ from aiogram.client.default import DefaultBotProperties
 
 from decouple import config
 from handlers import user, admin
-from db.init import init_db
+from db.init import init_db, async_session
+from middlewares.session import DBSessionMiddleware
 from commands import set_commands
+from logging_config import setup_logging
 
+setup_logging()
 
 async def main():
     await init_db()
     bot = Bot(token=config('BOT_TOKEN'), default=DefaultBotProperties(parse_mode='HTML'))
     dp = Dispatcher()
+
+    dp.update.middleware(DBSessionMiddleware(async_session))
 
     dp.include_routers(admin.router)
     for r in user.routers:

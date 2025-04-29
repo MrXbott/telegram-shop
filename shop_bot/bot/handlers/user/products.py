@@ -1,6 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InputMediaPhoto, FSInputFile, ContentType
 import os
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import MEDIA_FOLDER_PATH
 import keyboards.user_kb as kb
@@ -12,9 +13,9 @@ router = Router()
 
 
 @router.callback_query(F.data.startswith('category_'))
-async def show_products(callback: CallbackQuery):
+async def show_products(callback: CallbackQuery, session: AsyncSession):
     category_id = int(callback.data.split('_')[1])
-    category = await crud.get_category_with_products(category_id)
+    category = await crud.get_category_with_products(session, category_id)
     
     if callback.message.content_type == ContentType.TEXT:
         await callback.message.edit_text(f'Товары в категории {category.name}', 
@@ -28,12 +29,12 @@ async def show_products(callback: CallbackQuery):
             
 
 @router.callback_query(F.data.startswith('product_'))
-async def show_product(callback: CallbackQuery):
+async def show_product(callback: CallbackQuery, session: AsyncSession):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
-    product = await crud.get_product(product_id)
+    product = await crud.get_product(session, product_id)
     quantity = await cart.get_product_quantity(user_id, product_id)
-    is_favorite = await crud.is_in_favorites(user_id, product_id)
+    is_favorite = await crud.is_in_favorites(session, user_id, product_id)
 
     if product:
         if product.image:

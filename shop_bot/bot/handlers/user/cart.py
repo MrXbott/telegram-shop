@@ -1,5 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import keyboards.user_kb as kb
 from texts import cart_text
@@ -10,8 +11,8 @@ router = Router()
 
 
 @router.message(F.text.in_(['/cart', '🛒 Корзина']))
-async def show_cart(message: Message):
-    products = await cart.get_cart(message.from_user.id)
+async def show_cart(message: Message, session: AsyncSession):
+    products = await cart.get_cart(session, message.from_user.id)
     if not products:
         await message.answer('Корзина пуста.')
         return
@@ -19,11 +20,11 @@ async def show_cart(message: Message):
 
 
 @router.callback_query(F.data.startswith('add_'))
-async def add_product_to_cart(callback: CallbackQuery):
+async def add_product_to_cart(callback: CallbackQuery, session: AsyncSession):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
-    product = await crud.get_product(product_id)
-    is_favorite = await crud.is_in_favorites(user_id, product_id)
+    product = await crud.get_product(session, product_id)
+    is_favorite = await crud.is_in_favorites(session, user_id, product_id)
     if product:
         await cart.add_to_cart(user_id, product_id, 1)
         await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, 1))
@@ -31,38 +32,38 @@ async def add_product_to_cart(callback: CallbackQuery):
     
 
 @router.callback_query(F.data.startswith('increase_'))
-async def increase_product_quantity(callback: CallbackQuery):
+async def increase_product_quantity(callback: CallbackQuery, session: AsyncSession):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
     await cart.increase_quantity(user_id, product_id)
     quantity = await cart.get_product_quantity(user_id, product_id)
-    product = await crud.get_product(product_id)
-    is_favorite = await crud.is_in_favorites(user_id, product_id)
+    product = await crud.get_product(session, product_id)
+    is_favorite = await crud.is_in_favorites(session, user_id, product_id)
     if product:
         await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, quantity))
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith('decrease_'))
-async def decrease_product_quantity(callback: CallbackQuery):
+async def decrease_product_quantity(callback: CallbackQuery, session: AsyncSession):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
     await cart.decrease_quantity(user_id, product_id)
-    product = await crud.get_product(product_id)
+    product = await crud.get_product(session, product_id)
     quantity = await cart.get_product_quantity(user_id, product_id)
-    is_favorite = await crud.is_in_favorites(user_id, product_id)
+    is_favorite = await crud.is_in_favorites(session, user_id, product_id)
     if product:
         await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, quantity))
     await callback.answer()
 
 
 @router.callback_query(F.data.startswith('remove_'))
-async def remove_product_from_cart(callback: CallbackQuery):
+async def remove_product_from_cart(callback: CallbackQuery, session: AsyncSession):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
     await cart.remove_from_cart(user_id, product_id)
-    product = await crud.get_product(product_id)
-    is_favorite = await crud.is_in_favorites(user_id, product_id)
+    product = await crud.get_product(session, product_id)
+    is_favorite = await crud.is_in_favorites(session, user_id, product_id)
     if product:
         await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, quantity=0))
     await callback.answer('Удалено из корзины!')

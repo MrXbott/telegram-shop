@@ -1,5 +1,7 @@
 from typing import List
 from db.redis import redis_client
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from db import crud
 from db.models import Product
 
@@ -39,14 +41,14 @@ async def increase_quantity(user_id: int, product_id: int):
     await add_to_cart(user_id, product_id, quantity=1)
     
 
-async def get_cart(user_id: int) -> List[ProductInCart]:
+async def get_cart(session: AsyncSession, user_id: int) -> List[ProductInCart]:
     key = f'cart:{user_id}'
     items = await redis_client.hgetall(key)
     items = {int(k): int(v) for k, v in items.items()}
     product_ids = list(map(int, items.keys()))
     if not product_ids:
         return []
-    products = await crud.get_products_by_ids(product_ids)
+    products = await crud.get_products_by_ids(session, product_ids)
     return [ProductInCart(product, items[product.id]) for product in products]
 
 
