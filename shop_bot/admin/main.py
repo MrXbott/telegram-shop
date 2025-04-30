@@ -2,18 +2,15 @@ from flask import Flask, render_template, request, redirect, url_for, send_from_
 import os
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import SQLAlchemyError
-# from dotenv import load_dotenv
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload, joinedload, raiseload
 from db.models import Product, Category
 from db.init import sync_session
 from config import MEDIA_FOLDER_PATH
 
-# load_dotenv()
 
 app = Flask(__name__)
 
-# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  
-# MEDIA_FOLDER = os.getenv('MEDIA_FOLDER')
-# MEDIA_FOLDER_PATH = os.path.join(BASE_DIR, MEDIA_FOLDER)
 
 @app.route('/media/<path:filename>')
 def media_products(filename):
@@ -28,8 +25,9 @@ def index():
 @app.route('/products/')
 def product_list():
     with sync_session() as session:
-        products = session.query(Product).all()
-    return render_template('products.html', products=products)
+        stmt = select(Category).order_by(Category.name).options(selectinload(Category.products))
+        categories = session.scalars(stmt).all()
+    return render_template('products.html', categories= categories)
 
 
 @app.route('/products/add/', methods=['GET', 'POST'])

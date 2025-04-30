@@ -21,7 +21,7 @@ class Category(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
 
-    products: Mapped[list['Product']] = relationship(back_populates='category')
+    products: Mapped[list['Product']] = relationship(back_populates='category', order_by='Product.name')
     
 
 class Product(Base):

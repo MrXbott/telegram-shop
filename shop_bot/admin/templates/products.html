@@ -5,16 +5,19 @@
 </head>
 <body>
     <h1>Список продуктов</h1>
-    <ul>
-        {% for product in products %}
-        <li>
-            {{ product.name }} — {{ product.price }} ₽
-            {% if product.image %}
-                <img src="{{ url_for('media_products', filename=product.image) }}" alt="Product Image" width="50">
-            {% endif %}
-        </li>
-        {% endfor %}
-    </ul>
+    {% for category in categories %}
+        <h2>{{ category.name }}</h2>
+        <ul>
+            {% for product in category.products %}
+            <li>
+                {{ product.name }} — {{ product.price }} ₽
+                {% if product.image %}
+                    <img src="{{ url_for('media_products', filename=product.image) }}" alt="Product Image" width="50">
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    {% endfor %}
     <a href="{{ url_for('add_product') }}">➕ Добавить продукт</a>
 </body>
 </html>
