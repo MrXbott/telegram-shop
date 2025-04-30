@@ -8,6 +8,7 @@ from config import MEDIA_FOLDER_PATH
 import keyboards.user_kb as kb
 from texts import product_text
 from db import crud, cart
+from utils.decorators import handle_db_errors
 
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,7 @@ router = Router()
 
 
 @router.callback_query(F.data.startswith('category_'))
+@handle_db_errors()
 async def show_products(callback: CallbackQuery, session: AsyncSession):
     category_id = int(callback.data.split('_')[1])
     category = await crud.get_category_with_products(session, category_id)
@@ -32,6 +34,7 @@ async def show_products(callback: CallbackQuery, session: AsyncSession):
             
 
 @router.callback_query(F.data.startswith('product_'))
+@handle_db_errors()
 async def show_product(callback: CallbackQuery, session: AsyncSession):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id

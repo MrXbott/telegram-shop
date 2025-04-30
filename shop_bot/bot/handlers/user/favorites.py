@@ -5,6 +5,7 @@ import logging
 
 import keyboards.user_kb as kb
 from db import crud, cart
+from utils.decorators import handle_db_errors
 
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,7 @@ router = Router()
 
 
 @router.callback_query(F.data.startswith('favorites_'))
+@handle_db_errors()
 async def add_to_favorites(callback: CallbackQuery, session: AsyncSession):
     product_id = int(callback.data.split('_')[-1])
     user_id = callback.from_user.id
@@ -31,6 +33,7 @@ async def add_to_favorites(callback: CallbackQuery, session: AsyncSession):
 
 
 @router.message(F.text.in_(['/favorites', '⭐ Избранное']))
+@handle_db_errors()
 async def show_favorites(message: Message, session: AsyncSession):
     logger.info(f'Пользователь {message.from_user.id} вызвал команду /favorites')
     user_id = message.from_user.id
