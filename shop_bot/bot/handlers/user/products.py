@@ -18,17 +18,22 @@ router = Router()
 @router.callback_query(F.data.startswith('category_'))
 @handle_db_errors()
 async def show_products(callback: CallbackQuery, session: AsyncSession):
-    category_id = int(callback.data.split('_')[1])
-    category = await crud.get_category_with_products(session, category_id)
+    products_per_page = 3
+    parts = callback.data.split('_')
+    category_id = int(parts[1])
+    offset = int(parts[2]) if len(parts) > 2 else 0
+    category = await crud.get_category(session, category_id)
+    total_products = await crud.count_products_in_category(session, category_id)
+    products = await crud.get_products_by_category_and_offset(session, category_id, offset, products_per_page)
     
     if callback.message.content_type == ContentType.TEXT:
         await callback.message.edit_text(f'Товары в категории {category.name}', 
-                                     reply_markup=kb.products_keyboard(category.products)
+                                     reply_markup=kb.products_keyboard(category, products, offset, products_per_page, total_products)
                                      )
     elif callback.message.content_type == ContentType.PHOTO:
             await callback.message.delete()
             await callback.message.answer(f'Товары в категории {category.name}', 
-                                     reply_markup=kb.products_keyboard(category.products)
+                                     reply_markup=kb.products_keyboard(category, products, offset, products_per_page, total_products)
                                      )
     logger.info(f'📂 Пользователь {callback.from_user.id} просматривает товары из категории {category_id} - {category.name}')
             

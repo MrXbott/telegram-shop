@@ -1,6 +1,8 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from typing import List
+from math import ceil
 from db.models import Product, Category, Favorite
+
 
 def main_keyboard():
     return ReplyKeyboardMarkup(
@@ -20,13 +22,28 @@ def categories_keyboard(categories: List[Category]):
         ]
     )
 
-def products_keyboard(products: List[Product]):
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            *[[InlineKeyboardButton(text=f'{product.name} - {product.price}', callback_data=f'product_{product.id}')] for product in products],
-            [InlineKeyboardButton(text='⬅️ Назад', callback_data='back_to_catalog')]
-            ]
-    )
+def products_keyboard(
+                category: Category, 
+                products: List[Product], 
+                offset: int, 
+                products_per_page: int, 
+                total_products: int
+                ):
+    keyboard=[[InlineKeyboardButton(text=f'{product.name} - {product.price}₽', callback_data=f'product_{product.id}')] for product in products]
+    
+    pagination_btns = []
+    if offset > 0:
+        pagination_btns.append(InlineKeyboardButton(text='⬅️', callback_data=f'category_{category.id}_{offset - products_per_page}'))
+    
+    current_page = int(offset / products_per_page + 1)
+    total_pages = ceil(total_products/products_per_page)
+    pagination_btns.append(InlineKeyboardButton(text=f'page {current_page} / {total_pages}', callback_data='ignore'))
+
+    if offset + products_per_page < total_products:
+        pagination_btns.append(InlineKeyboardButton(text='➡️', callback_data=f'category_{category.id}_{offset + products_per_page}'))
+    keyboard.append(pagination_btns)
+    keyboard.append([InlineKeyboardButton(text='⬅️ Назад к категориям', callback_data='back_to_catalog')])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def product_keyboard(product: Product, is_favorite: bool, quantity: int = 0):
     favorite_text = '⭐ В избранном' if is_favorite else '⭐ Добавить в избранное'

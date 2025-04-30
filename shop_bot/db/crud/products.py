@@ -16,6 +16,7 @@ async def get_all_products(session: AsyncSession) -> List[Product]:
     result = await session.execute(
                             select(Product)
                             .options(selectinload(Product.category))
+                            .order_by(Product.name)
                         )
     return result.scalars().all()
 
@@ -35,7 +36,20 @@ async def get_products_by_ids(session: AsyncSession, product_ids: List[int]) -> 
     result = await session.execute(
                             select(Product)
                             .where(Product.id.in_(product_ids))
+                            .order_by(Product.name)
                             )
+    return result.scalars().all()
+
+
+@db_errors()
+async def get_products_by_category_and_offset(session: AsyncSession, category_id: int, offset: int, limit: int) -> List[Product]:
+    result = await session.execute(
+                            select(Product)
+                            .where(Product.category_id == category_id)
+                            .order_by(Product.name)
+                            .offset(offset)
+                            .limit(limit)
+                        )
     return result.scalars().all()
 
 
