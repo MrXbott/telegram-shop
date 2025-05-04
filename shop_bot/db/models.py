@@ -1,7 +1,7 @@
-from sqlalchemy import Integer, String, ForeignKey, Boolean
+from sqlalchemy import Integer, String, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from typing import List
-
+from datetime import datetime
 
 class Base(DeclarativeBase): 
     pass
@@ -45,3 +45,24 @@ class Favorite(Base):
 
     product: Mapped[Product] = relationship(Product, lazy='joined')
     
+
+class Order(Base):
+    __tablename__ = 'orders'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    created: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    items = relationship('OrderItem', back_populates='order')
+
+
+class OrderItem(Base):
+    __tablename__ = 'order_items'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    order_id: Mapped[int] = mapped_column(ForeignKey('orders.id'), nullable=False)
+    product_id: Mapped[int] = mapped_column(ForeignKey('products.id'), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    order = relationship('Order', back_populates='items')
+    product = relationship('Product')
