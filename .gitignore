@@ -175,3 +175,4 @@ cython_debug/
 
 .DS_Store
 shop_bot/media
+shop_bot/logs

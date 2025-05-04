@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, ForeignKey, Boolean, DateTime
+from sqlalchemy import Integer, String, ForeignKey, Boolean, DateTime, Numeric
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from typing import List
 from datetime import datetime
@@ -29,7 +29,7 @@ class Product(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    price: Mapped[int] = mapped_column(Integer, nullable=False)
+    price: Mapped[Numeric] = mapped_column(Numeric(10,2), nullable=False)
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey('categories.id'), nullable=False)
     image: Mapped[str] = mapped_column(String, nullable=True)
 
@@ -52,17 +52,19 @@ class Order(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
     created: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    total_price: Mapped[Numeric] = mapped_column(Numeric(10,2), nullable=False)
 
-    items = relationship('OrderItem', back_populates='order')
+    items = relationship('OrderItem', back_populates='order', lazy='selectin', cascade='all, delete-orphan')
 
 
 class OrderItem(Base):
     __tablename__ = 'order_items'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    order_id: Mapped[int] = mapped_column(ForeignKey('orders.id'), nullable=False)
+    order_id: Mapped[int] = mapped_column(ForeignKey('orders.id', ondelete='CASCADE'), nullable=False)
     product_id: Mapped[int] = mapped_column(ForeignKey('products.id'), nullable=False)
+    price_at_order: Mapped[Numeric] = mapped_column(Numeric(10, 2), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
 
     order = relationship('Order', back_populates='items')
-    product = relationship('Product')
+    product = relationship('Product', lazy='selectin')

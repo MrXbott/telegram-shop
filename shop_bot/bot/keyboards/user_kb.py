@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from typing import List
 from math import ceil
-from db.models import Product, Category, Favorite
+from db.models import Product, Category, Favorite, Order
 
 
 def main_keyboard():
@@ -81,5 +81,20 @@ def favorites_keyboard(favorites: List[Favorite]):
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text=favorite.product.name, callback_data=f'product_{favorite.product.id}')] for favorite in favorites
+        ]
+    )
+
+def orders_keyboard(orders: List[Order]):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=f'№ {order.id} - {order.created.strftime("%d.%m.%Y %H:%M")}', callback_data=f'order_{order.id}')] for order in orders
+        ]
+    )
+
+
+def order_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text='⬅️ Назад к заказам', callback_data='back_to_orders')]
         ]
     )
