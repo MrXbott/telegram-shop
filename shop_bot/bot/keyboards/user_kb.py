@@ -72,7 +72,7 @@ def product_keyboard(product: Product, is_favorite: bool, quantity: int = 0):
 def cart_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text='✅ Оформить заказ', callback_data='checkout')],
+            [InlineKeyboardButton(text='✅ Оформить заказ', callback_data='place_an_order')],
             [InlineKeyboardButton(text='🗑 Очистить', callback_data='clear_cart')],
         ]
     )
