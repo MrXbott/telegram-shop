@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, ForeignKey, Boolean, DateTime, Numeric
+from sqlalchemy import Integer, String, ForeignKey, Boolean, DateTime, Numeric, CheckConstraint
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from typing import List
 from datetime import datetime
@@ -35,6 +35,10 @@ class Product(Base):
 
     category: Mapped['Category'] = relationship(back_populates='products')
 
+    __table_args__ = (
+        CheckConstraint('price >= 0', name='check_price_positive'),
+    )
+
 
 class Favorite(Base):
     __tablename__ = 'favorites'
@@ -56,6 +60,10 @@ class Order(Base):
 
     items = relationship('OrderItem', back_populates='order', lazy='selectin', cascade='all, delete-orphan')
 
+    __table_args__ = (
+        CheckConstraint('total_price > 0', name='check_total_price_positive'),
+    )
+
 
 class OrderItem(Base):
     __tablename__ = 'order_items'
@@ -68,3 +76,8 @@ class OrderItem(Base):
 
     order = relationship('Order', back_populates='items')
     product = relationship('Product', lazy='selectin')
+
+    __table_args__ = (
+        CheckConstraint('quantity > 0', name='check_quantity_positive'),
+        CheckConstraint('price_at_order >= 0', name='check_price_at_order_positive'),
+    )
