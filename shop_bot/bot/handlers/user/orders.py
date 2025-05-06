@@ -26,7 +26,12 @@ async def place_an_order(callback: CallbackQuery, session: AsyncSession):
         await callback.answer('⚠️🛒 Невозможно оформить заказ: ваша корзина пуста.')
         return
     
-    order = await crud.create_order(session, user_id)
+    try:
+        order = await crud.create_order(session, user_id)
+    except ValueError as e:
+        await callback.answer('⚠️Недостаточно товара в наличии чтобы оформить заказ')
+        await callback.message.answer('⚠️Недостаточно товара в наличии чтобы оформить заказ')
+        logger.error(f'❌ Недостаточно товара в наличии чтобы оформить заказ: {e}', exc_info=False)
     if order:
         await cart.clear_cart(user_id)
         await callback.message.edit_text(f'✅ Заказ №{order.id} оформлен! Мы свяжемся с вами.')

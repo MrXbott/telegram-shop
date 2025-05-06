@@ -46,10 +46,14 @@ async def increase_product_quantity(callback: CallbackQuery, session: AsyncSessi
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
     quantity = await cart.get_product_quantity(user_id, product_id)
-    new_quantity = await cart.increase_quantity(user_id, product_id)
     product = await crud.get_product(session, product_id)
     is_favorite = await crud.is_in_favorites(session, user_id, product_id)
+
     if product:
+        if product.quantity_in_stock <= quantity:
+            await callback.answer('Это максимальное количество в наличии')
+            return
+        new_quantity = await cart.increase_quantity(user_id, product_id)
         await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, new_quantity))
     await callback.answer()
     logger.info(f'🔺 Пользователь {callback.from_user.id} увеличил количество продукта {product_id}: {quantity} -> {new_quantity}')

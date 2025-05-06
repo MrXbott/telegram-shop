@@ -21,6 +21,10 @@ async def create_order(session: AsyncSession, user_id: int) -> Order:
     order_items = []
     total_price = 0
     for item in items:
+        if item.product.quantity_in_stock < item.quantity:
+            raise ValueError(f'Недостаточно товара: {item.product.name}')
+        
+        item.product.quantity_in_stock -= item.quantity
         total_price += item.product.price * item.quantity
         
         order_items.append(

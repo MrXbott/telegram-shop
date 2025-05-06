@@ -68,6 +68,13 @@ def product_keyboard(product: Product, is_favorite: bool, quantity: int = 0):
                 [InlineKeyboardButton(text='⬅️ Назад', callback_data=f'category_{product.category_id}')]
             ]
         )
+    
+def not_available_product_keyboard(product: Product):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text='⬅️ Назад', callback_data=f'category_{product.category_id}')]
+        ]
+    )
 
 def cart_keyboard():
     return InlineKeyboardMarkup(

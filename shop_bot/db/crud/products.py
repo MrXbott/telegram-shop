@@ -37,6 +37,7 @@ async def get_products_by_ids(session: AsyncSession, product_ids: List[int]) -> 
                             select(Product)
                             .where(Product.id.in_(product_ids))
                             .order_by(Product.name)
+                            .with_for_update()
                             )
     return result.scalars().all()
 

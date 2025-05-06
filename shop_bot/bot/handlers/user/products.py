@@ -53,11 +53,17 @@ async def show_product(callback: CallbackQuery, session: AsyncSession):
         else:
             photo_path = os.path.join(MEDIA_FOLDER_PATH, 'no_photo.png')
         photo = FSInputFile(photo_path)
+        if product.quantity_in_stock > 0:
+            text = product_text(product) 
+            keyboard = kb.product_keyboard(product, is_favorite, quantity)
+        else:
+             text = product_text(product) + '\nНет в наличии'
+             keyboard = kb.not_available_product_keyboard(product)
         await callback.message.edit_media(
                 media=InputMediaPhoto(
                     media=photo,
-                    caption=product_text(product) 
+                    caption=text
                 ),
-                reply_markup=kb.product_keyboard(product, is_favorite, quantity)
+                reply_markup=keyboard
             )
     logger.info(f'🍏 Пользователь {callback.from_user.id} просматривает товар {product_id} - {product.name} из категории {product.category_id} - {product.category.name}')
