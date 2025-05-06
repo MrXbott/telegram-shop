@@ -10,7 +10,7 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = 'users'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)  # Telegram user ID
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False) 
     name: Mapped[str] = mapped_column(String)
 
 
@@ -32,11 +32,13 @@ class Product(Base):
     price: Mapped[Numeric] = mapped_column(Numeric(10,2), nullable=False)
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey('categories.id'), nullable=False)
     image: Mapped[str] = mapped_column(String, nullable=True)
+    quantity_in_stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     category: Mapped['Category'] = relationship(back_populates='products')
 
     __table_args__ = (
         CheckConstraint('price >= 0', name='check_price_positive'),
+        CheckConstraint('quantity_in_stock >= 0', name='check_quantity_in_stock_positive'),
     )
 
 
