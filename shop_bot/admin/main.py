@@ -1,13 +1,16 @@
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory
 import os
 from werkzeug.utils import secure_filename
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, DataError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload, joinedload, raiseload
 from db.models import Product, Category
 from db.init import sync_session
 from config import MEDIA_FOLDER_PATH
+from exceptions.products import NegativeProductPriceError, NegativeProductQuantityError
 import logging
+# from psycopg2.errors import NumericValueOutOfRange
+# from asyncpg.exceptions import NumericValueOutOfRangeError
 
 
 logger = logging.getLogger(__name__)
@@ -38,6 +41,7 @@ def add_product():
         if request.method == 'POST':
             form = request.form
             file = request.files.get('image')
+            file_path = ''
             if file and file.filename != '':
                 file_name = secure_filename(file.filename)
                 file_path = os.path.join('products/', file_name)
@@ -53,10 +57,10 @@ def add_product():
                     raise ValueError('Название не может быть пустым')
 
                 if price < 0:
-                    raise ValueError('Цена не может быть отрицательной')
+                    raise NegativeProductPriceError(price)
                 
                 if quantity_in_stock < 0:
-                    raise ValueError('Количество не может быть отрицательным')
+                    raise NegativeProductQuantityError(quantity_in_stock)
                 
                 category = session.query(Category).filter_by(id=category_id).first()
                 if not category:
@@ -73,11 +77,17 @@ def add_product():
                 session.commit()
                 logger.info(f'✅ Добавлен новый продукт: {product.name} (ID: {product.id})')
 
-            except (SQLAlchemyError, ValueError) as e:
+            except DataError as e:
                 session.rollback()
-                logger.error(f'❌ Ошибка при добавлении продукта: {e}', exc_info=True)
-                return f'Ошибка: {e}', 400
-                
+                logger.error(f'❌ Ошибка: цена выше максимально допустимого значения: {e}', exc_info=True)
+                return f'Ошибка: цена выше максимально допустимого значения: {e}', 400
+            except SQLAlchemyError as e:
+                session.rollback()
+                logger.error(f'❌ Ошибка при добавлении товара: {e}', exc_info=True)
+                return f'Ошибка при добавлении товара', 400
+            except Exception as e:
+                return f'{e}', 400
+            
             return redirect(url_for('product_list'))
         
         categories = session.query(Category).all()

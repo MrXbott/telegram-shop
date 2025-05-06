@@ -9,6 +9,7 @@ from db import crud, cart
 from db.cart import ProductInCart
 from utils.decorators import handle_db_errors
 from texts import order_text
+from exceptions.products import ProductOutOfStockError
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ async def place_an_order(callback: CallbackQuery, session: AsyncSession):
     
     try:
         order = await crud.create_order(session, user_id)
-    except ValueError as e:
+    except ProductOutOfStockError as e:
         await callback.answer('⚠️Недостаточно товара в наличии чтобы оформить заказ')
         await callback.message.answer('⚠️Недостаточно товара в наличии чтобы оформить заказ')
         logger.error(f'❌ Недостаточно товара в наличии чтобы оформить заказ: {e}', exc_info=False)

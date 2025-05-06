@@ -7,6 +7,8 @@ import logging
 from db.models import Order, OrderItem
 from db.cart import get_cart
 from utils.decorators import db_errors
+from exceptions.orders import InvalidOrderTotalPriceError
+from exceptions.products import ProductOutOfStockError
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ async def create_order(session: AsyncSession, user_id: int) -> Order:
     total_price = 0
     for item in items:
         if item.product.quantity_in_stock < item.quantity:
-            raise ValueError(f'Недостаточно товара: {item.product.name}')
+            raise ProductOutOfStockError(item.product.name)
         
         item.product.quantity_in_stock -= item.quantity
         total_price += item.product.price * item.quantity
@@ -37,7 +39,7 @@ async def create_order(session: AsyncSession, user_id: int) -> Order:
         )
     
     if total_price < 0:
-        raise ValueError('Цена не может быть отрицательной')
+        raise InvalidOrderTotalPriceError(total_price)
     order.total_price = total_price
 
     session.add_all(order_items)
