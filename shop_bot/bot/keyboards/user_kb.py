@@ -79,7 +79,7 @@ def not_available_product_keyboard(product: Product):
 def cart_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text='✅ Оформить заказ', callback_data='place_an_order')],
+            [InlineKeyboardButton(text='✅ Оформить заказ', callback_data='details_for_order')],
             [InlineKeyboardButton(text='🗑 Очистить', callback_data='clear_cart')],
         ]
     )
@@ -105,3 +105,10 @@ def order_keyboard():
             [InlineKeyboardButton(text='⬅️ Назад к заказам', callback_data='back_to_orders')]
         ]
     )
+
+def confirm_order_details_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text='✅ Оформить', callback_data='confirm_order')],
+            # [InlineKeyboardButton(text='⬅️ Назад', callback_data='edit_order')]
+    ])

@@ -14,7 +14,7 @@ from exceptions.products import ProductOutOfStockError
 logger = logging.getLogger(__name__)
 
 @db_errors()
-async def create_order(session: AsyncSession, user_id: int) -> Order:
+async def create_order(session: AsyncSession, user_id: int, data: dict) -> Order:
     order = Order(user_id=user_id, total_price=0)
     session.add(order)
     await session.flush()
