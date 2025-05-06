@@ -27,14 +27,15 @@ async def show_cart(message: Message, session: AsyncSession):
 @router.callback_query(F.data.startswith('add_'))
 @handle_db_errors()
 async def add_product_to_cart(callback: CallbackQuery, session: AsyncSession):
+    quantity = 1
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
     logger.info(f'📥 Пользователь {callback.from_user.id} добавил в корзину продукт {product_id}')
     product = await crud.get_product(session, product_id)
     is_favorite = await crud.is_in_favorites(session, user_id, product_id)
     if product:
-        await cart.add_to_cart(user_id, product_id, 1)
-        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, 1))
+        await cart.add_to_cart(user_id, product_id, quantity)
+        await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, quantity))
         await callback.answer('Добавлено в корзину')
     
     

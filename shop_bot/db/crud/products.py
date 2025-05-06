@@ -55,5 +55,7 @@ async def get_products_by_category_and_offset(session: AsyncSession, category_id
 
 @db_errors()
 async def add_product(session: AsyncSession, name: str, price: int) -> None:
+    if price < 0:
+        raise ValueError('Цена не может быть отрицательной')
     session.add(Product(name=name, price=price))
     await session.commit()

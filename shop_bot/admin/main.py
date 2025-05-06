@@ -7,8 +7,10 @@ from sqlalchemy.orm import selectinload, joinedload, raiseload
 from db.models import Product, Category
 from db.init import sync_session
 from config import MEDIA_FOLDER_PATH
+import logging
 
 
+logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 
@@ -35,7 +37,6 @@ def add_product():
     with sync_session() as session:
         if request.method == 'POST':
             form = request.form
-
             file = request.files.get('image')
             if file and file.filename != '':
                 file_name = secure_filename(file.filename)
@@ -43,16 +44,34 @@ def add_product():
                 file.save(os.path.join(MEDIA_FOLDER_PATH, 'products', file_name))
 
             try:
-                product = Product(name=form['name'], 
-                                  price=int(form['price']), 
-                                  category_id=int(form['category']), 
+                name = form['name'].strip()
+                price = int(form['price'])
+                category_id = int(form['category'])
+
+                if not name:
+                    raise ValueError('Название не может быть пустым')
+
+                if price < 0:
+                    raise ValueError('Цена не может быть отрицательной')
+                
+                category = session.query(Category).filter_by(id=category_id).first()
+                if not category:
+                    logger.warning(f'❗ Категория с ID {category_id} не найдена.')
+                    return f'Категория с ID {category_id} не найдена.', 400
+                
+                product = Product(name=name, 
+                                  price=price, 
+                                  category_id=category_id, 
                                   image=file_path
                                   )
                 session.add(product)
                 session.commit()
-            except SQLAlchemyError as e:
-                # Можно добавить обработку ошибок и откат транзакции
-                print(f'Error adding product: {e}')
+                logger.info(f'✅ Добавлен новый продукт: {product.name} (ID: {product.id})')
+
+            except (SQLAlchemyError, ValueError) as e:
+                session.rollback()
+                logger.error(f'❌ Ошибка при добавлении продукта: {e}', exc_info=True)
+                return f'Ошибка: {e}', 400
                 
             return redirect(url_for('product_list'))
         
