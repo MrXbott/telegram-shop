@@ -47,12 +47,16 @@ def add_product():
                 name = form['name'].strip()
                 price = int(form['price'])
                 category_id = int(form['category'])
+                quantity_in_stock = int(form['quantity_in_stock'])
 
                 if not name:
                     raise ValueError('Название не может быть пустым')
 
                 if price < 0:
                     raise ValueError('Цена не может быть отрицательной')
+                
+                if quantity_in_stock < 0:
+                    raise ValueError('Количество не может быть отрицательным')
                 
                 category = session.query(Category).filter_by(id=category_id).first()
                 if not category:
@@ -62,6 +66,7 @@ def add_product():
                 product = Product(name=name, 
                                   price=price, 
                                   category_id=category_id, 
+                                  quantity_in_stock=quantity_in_stock,
                                   image=file_path
                                   )
                 session.add(product)
