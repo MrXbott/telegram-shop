@@ -18,16 +18,31 @@ router = Router()
 class AddNewAddress(StatesGroup):
     waiting_for_address = State()
 
-@router.message(F.text.in_(['/addresses', '🏠 Мои адреса']))
-async def show_addresses(message: Message, session: AsyncSession):
-    logger.info(f'Пользователь {message.from_user.id} вызвал команду /addresses')
-    
-    user_id = message.from_user.id
+
+async def user_addresses(msg: Message|CallbackQuery, session: AsyncSession):
+    user_id = msg.from_user.id
     addresses = await crud.get_user_addresses(session, user_id)
     if not addresses:
-        await message.answer('Здесь будут ваши адреса доставки. Пока адресов нет.')
+        await msg.answer('Здесь будут ваши адреса доставки. Пока адресов нет.')
         return
-    await message.answer(text='Список ваших адресов доставки:', reply_markup=kb.address_list_keyboard(addresses))
+    text = 'Список ваших адресов доставки:'
+    keyboard = kb.address_list_keyboard(addresses)
+    if isinstance(msg, Message):
+        await msg.answer(text, reply_markup=keyboard)
+    else:
+        await msg.message.edit_text(text, reply_markup=keyboard)
+
+@router.message(F.text.in_(['/addresses', '🏠 Мои адреса']))
+@handle_db_errors()
+async def show_user_addresses(message: Message, session: AsyncSession):
+    logger.info(f'🏠 Пользователь {message.from_user.id} вызвал команду /addresses')
+    await user_addresses(message, session)
+
+@router.callback_query(F.data == 'back_to_addresses')
+@handle_db_errors()
+async def back_to_addresses(callback: CallbackQuery, session: AsyncSession):
+    logger.info(f'🏠 Пользователь {callback.from_user.id} вернулся к списку адресов')
+    await user_addresses(callback, session)
 
 @router.callback_query(F.data == 'new_address')
 async def add_new_address(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
