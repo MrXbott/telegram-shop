@@ -11,3 +11,11 @@ def address_list_keyboard(addresses: List[Address]):
             [InlineKeyboardButton(text='🏠 Добавить адрес', callback_data='new_address')],
         ]
     )
+
+def address_details_keyboard(address: Address):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text='Удалить', callback_data=f'delete_address_{address.id}')],
+            [InlineKeyboardButton(text='Назад к адресам', callback_data='back_to_addresses')],
+        ]
+    )

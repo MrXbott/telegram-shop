@@ -30,10 +30,15 @@ async def show_addresses(message: Message, session: AsyncSession):
     await message.answer(text='Список ваших адресов доставки:', reply_markup=kb.address_list_keyboard(addresses))
 
 @router.callback_query(F.data == 'new_address')
-async def add_new_address(callback: CallbackQuery, state: FSMContext):
-    logger.info(f'🏠 Пользователь {callback.from_user.id} хочет добавить новый адрес.')
-    await callback.message.answer('Введите адрес: улица, дом, подъезд, квартира и этаж')
-    await state.set_state(AddNewAddress.waiting_for_address)
+async def add_new_address(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    user_id = callback.from_user.id
+    logger.info(f'🏠 Пользователь {user_id} хочет добавить новый адрес.')
+    address_count = await crud.count_user_addresses(session, user_id)
+    if address_count < 5:
+        await callback.message.answer('Введите адрес: улица, дом, подъезд, квартира и этаж')
+        await state.set_state(AddNewAddress.waiting_for_address)
+    else:
+        await callback.message.answer(text='У вас максимальное количество адресов')
 
 @router.message(AddNewAddress.waiting_for_address)
 @handle_db_errors()
@@ -56,3 +61,25 @@ async def save_new_address(message: Message, state: FSMContext, session: AsyncSe
         logger.info(f'✅ Пользователь {user_id} добавил адрес с id {new_address.id}')
     except Exception as e:
         logger.error(f'❌ Произошла ошибка при добавлении адреса: {e}', exc_info=True)
+
+@router.callback_query(F.data.startswith('address_'))
+@handle_db_errors()
+async def show_address(callback: CallbackQuery, session: AsyncSession):
+    user_id = callback.from_user.id
+    address_id = int(callback.data.split('_')[1])
+    logger.info(f'📦 Пользователь {user_id} хочет просмотреть адрес {address_id}')
+    address = await crud.get_address(session, user_id, address_id)
+    await callback.message.edit_text(text=address.address, reply_markup=kb.address_details_keyboard(address))
+
+@router.callback_query(F.data.startswith('delete_address_'))
+@handle_db_errors()
+async def delete_address(callback: CallbackQuery, session: AsyncSession):
+    user_id = callback.from_user.id
+    address_id = int(callback.data.split('_')[-1])
+    logger.info(f'❌🏠 Пользователь {user_id} хочет удалить адрес {address_id}')
+    address: Address = await crud.delete_address(session, user_id, address_id)
+    if address.is_deleted:
+        await callback.message.edit_text(text='🏠❌ Адрес удален')
+    else:
+        await callback.message.edit_text(text='⚠️ Что-то пошло не так во время удаления адреса')
+

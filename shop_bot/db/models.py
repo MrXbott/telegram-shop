@@ -59,6 +59,7 @@ class Address(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
     address: Mapped[str] = mapped_column(String, nullable=False)
+    is_deleted: Mapped[Boolean] = mapped_column(Boolean, default=False, nullable=False)
 
     user: Mapped[User] = relationship(User, lazy='selectin')
 
