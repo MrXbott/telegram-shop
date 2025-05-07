@@ -1,7 +1,8 @@
 from sqlalchemy import Integer, String, ForeignKey, Boolean, DateTime, Numeric, CheckConstraint
-from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column, validates
 from typing import List
 from datetime import datetime
+import re
 
 class Base(DeclarativeBase): 
     pass
@@ -46,11 +47,31 @@ class Favorite(Base):
     __tablename__ = 'favorites'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
     product_id: Mapped[int] = mapped_column(Integer, ForeignKey('products.id'), nullable=False)
 
     product: Mapped[Product] = relationship(Product, lazy='joined')
     
+
+class Address(Base):
+    __tablename__ = 'addresses'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
+    address: Mapped[str] = mapped_column(String, nullable=False)
+
+    user: Mapped[User] = relationship(User, lazy='selectin')
+
+    @validates('address')
+    def validate_address(self, key, value):
+        if not value or not value.strip():
+            raise ValueError('Адрес не может быть пустым')
+        return value.strip()
+    
+    __table_args__ = (
+        CheckConstraint('char_length(trim(address)) > 0', name='check_name_not_empty'),
+    )
+
 
 class Order(Base):
     __tablename__ = 'orders'
@@ -58,9 +79,13 @@ class Order(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
     created: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    address_id: Mapped[int] = mapped_column(Integer, ForeignKey('addresses.id'), nullable=False) 
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    phone: Mapped[str] = mapped_column(String(20), nullable=False)
     total_price: Mapped[Numeric] = mapped_column(Numeric(10,2), nullable=False)
 
     items = relationship('OrderItem', back_populates='order', lazy='selectin', cascade='all, delete-orphan')
+    address: Mapped[Address] = relationship(Address, lazy='joined')
 
     __table_args__ = (
         CheckConstraint('total_price > 0', name='check_total_price_positive'),
