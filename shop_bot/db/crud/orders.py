@@ -4,7 +4,7 @@ from sqlalchemy import select
 from typing import List
 import logging
 
-from db.models import Order, OrderItem
+from db.models import Order, OrderItem, Address
 from db.cart import get_cart
 from utils.decorators import db_errors
 from exceptions.orders import InvalidOrderTotalPriceError
@@ -14,8 +14,18 @@ from exceptions.products import ProductOutOfStockError
 logger = logging.getLogger(__name__)
 
 @db_errors()
-async def create_order(session: AsyncSession, user_id: int, data: dict) -> Order:
-    order = Order(user_id=user_id, total_price=0)
+async def create_order(session: AsyncSession, user_id: int, data: dict) -> Order:    
+    address = Address(user_id=user_id, address=data.get('address'))
+    session.add(address)
+    await session.flush()
+
+    order = Order(
+                user_id=user_id, 
+                address_id=address.id, 
+                name=data.get('name'),
+                phone=data.get('phone'),
+                total_price=0
+                )
     session.add(order)
     await session.flush()
 
@@ -45,6 +55,7 @@ async def create_order(session: AsyncSession, user_id: int, data: dict) -> Order
     session.add_all(order_items)
 
     await session.commit()
+
     await session.refresh(order)
     return order
 
