@@ -14,10 +14,29 @@ from exceptions.products import ProductOutOfStockError
 logger = logging.getLogger(__name__)
 
 @db_errors()
-async def create_order(session: AsyncSession, user_id: int, data: dict) -> Order:    
-    address = Address(user_id=user_id, address=data.get('address'))
-    session.add(address)
-    await session.flush()
+async def create_order(session: AsyncSession, user_id: int, data: dict) -> Order:   
+    address_id = data.get('address_id')
+    address_text = data.get('address_text')
+
+    if address_id:
+        result = await session.execute(
+                            select(Address)
+                            .where(Address.user_id==user_id, Address.id==address_id)
+                            )
+        address = result.scalar_one_or_none() 
+    elif address_text:
+        # проверяем что среди адресов юзера нет точно такого же
+        address = await session.scalar(
+                                select(Address)
+                                .where(Address.user_id == user_id, Address.address == address_text)
+                        )
+    else:
+        raise ValueError('Данные для адреса (id или текст) не указаны')
+    
+    if not address:
+        address = Address(user_id=user_id, address=address_text)
+        session.add(address)
+        await session.flush()
 
     order = Order(
                 user_id=user_id, 

@@ -8,6 +8,7 @@ import logging
 import re
 
 import keyboards.user_kb as kb
+from keyboards.addresses import choosing_address_keyboard
 from db import crud, cart
 from db.cart import ProductInCart
 from utils.decorators import handle_db_errors
@@ -21,20 +22,47 @@ router = Router()
 
 
 class PlaceAnOrder(StatesGroup):
-    waiting_for_address = State()
+    choosing_address = State()
+    waiting_for_address_id = State()
+    waiting_for_address_text = State()
     waiting_for_name = State()
     waiting_for_phone = State()
     waiting_for_confirmation = State()
 
 
 @router.callback_query(F.data == 'details_for_order')
-async def add_order_details(callback: CallbackQuery, state: FSMContext):
-    logger.info(f'📦 Пользователь {callback.from_user.id} начал оформлять заказ.')
+async def add_order_details(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    user_id = callback.from_user.id
+    addresses = await crud.get_user_addresses(session, user_id)
+    logger.info(f'📦 Пользователь {user_id} начал оформлять заказ.')
+    if addresses:
+        await callback.message.answer('Выберите адрес доставки или введите новый:', reply_markup=choosing_address_keyboard(addresses))
+        await state.set_state(PlaceAnOrder.choosing_address)
+    else:
+        await callback.message.answer('Укажите адрес доставки: \nУлицу, дом, подъезд, квартиру и этаж:')
+        await state.set_state(PlaceAnOrder.waiting_for_address_text)
+
+
+@router.callback_query(F.data.startswith('use_address_'), PlaceAnOrder.choosing_address)
+async def use_saved_address(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    user_id = callback.from_user.id
+    address_id = int(callback.data.split('_')[-1])
+    address = await crud.get_address(session, user_id, address_id)
+    
+    if not address or address.is_deleted:
+        await callback.message.answer('Адрес не найден.')
+        return
+    
+    await state.update_data(address_id=address.id)
+    await callback.message.answer('Введите ваше имя:')
+    await state.set_state(PlaceAnOrder.waiting_for_name)
+
+@router.callback_query(F.data == 'enter_new_address', PlaceAnOrder.choosing_address)
+async def enter_new_address(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer('Укажите адрес доставки: \nУлицу, дом, подъезд, квартиру и этаж:')
-    await state.set_state(PlaceAnOrder.waiting_for_address)
+    await state.set_state(PlaceAnOrder.waiting_for_address_text)
 
-
-@router.message(PlaceAnOrder.waiting_for_address)
+@router.message(PlaceAnOrder.waiting_for_address_text)
 async def add_order_address(message: Message, state: FSMContext):
     address = message.text.strip()
     if not is_valid_address(address):
@@ -43,7 +71,7 @@ async def add_order_address(message: Message, state: FSMContext):
         return
     
     logger.info(f'ℹ️ Пользователь {message.from_user.id} ввел адрес: {message.text}.')
-    await state.update_data(address=address)
+    await state.update_data(address_text=address)
     await message.answer('Введите ваше имя:')
     await state.set_state(PlaceAnOrder.waiting_for_name)
 
@@ -63,20 +91,26 @@ async def add_order_name(message: Message, state: FSMContext):
 
 
 @router.message(PlaceAnOrder.waiting_for_phone)
-async def add_order_phone(message: Message, state: FSMContext):
+async def add_order_phone(message: Message, state: FSMContext, session: AsyncSession):
+    user_id = message.from_user.id
     phone = message.text.strip()    
     if not is_valid_phone(phone):
         await message.answer('❌ Некорректный номер телефона. Введите в формате: +7XXXXXXXXXX')
-        logger.warning(f'ℹ️ Пользователь {message.from_user.id} ввел некорректный номер телефона: {message.text}.')
+        logger.warning(f'ℹ️ Пользователь {user_id} ввел некорректный номер телефона: {message.text}.')
         return
     
     await state.update_data(phone=normalize_phone(phone))
     logger.info(f'ℹ️ Пользователь {message.from_user.id} ввел телефон: {message.text}.')
     data = await state.get_data()
-
+    address_id = data.get('address_id')
+    address_text = data.get('address_text')
+    
+    address = None
+    if address_id:
+        address = await crud.get_address(session, user_id, address_id)
     text = (
         f'Проверьте ваши данные:\n\n'
-        f'📍 Адрес: {data['address']}\n'
+        f'📍 Адрес: {address.address if address else address_text}\n'
         f'👤 Имя: {data['name']}\n'
         f'📞 Телефон: {data['phone']}\n\n'
         f'Все верно?'

@@ -19,3 +19,11 @@ def address_details_keyboard(address: Address):
             [InlineKeyboardButton(text='Назад к адресам', callback_data='back_to_addresses')],
         ]
     )
+
+def choosing_address_keyboard(addresses: List[Address]):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            *[[InlineKeyboardButton(text=address.address, callback_data=f'use_address_{address.id}')] for address in addresses],
+            [InlineKeyboardButton(text='🏠 Указать новый адрес', callback_data='enter_new_address')],
+        ]
+    )
