@@ -33,6 +33,7 @@ class Product(Base):
     price: Mapped[Numeric] = mapped_column(Numeric(10,2), nullable=False)
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey('categories.id'), nullable=False)
     image: Mapped[str] = mapped_column(String, nullable=True)
+    image_id: Mapped[str] = mapped_column(String, nullable=True)
     quantity_in_stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     category: Mapped['Category'] = relationship(back_populates='products')

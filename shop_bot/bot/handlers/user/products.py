@@ -48,22 +48,28 @@ async def show_product(callback: CallbackQuery, session: AsyncSession):
     is_favorite = await crud.is_in_favorites(session, user_id, product_id)
 
     if product:
-        if product.image:
-            photo_path = os.path.join(MEDIA_FOLDER_PATH, product.image)
-        else:
-            photo_path = os.path.join(MEDIA_FOLDER_PATH, 'no_photo.png')
-        photo = FSInputFile(photo_path)
+        text = product_text(product) 
+        
         if product.quantity_in_stock > 0:
-            text = product_text(product) 
             keyboard = kb.product_keyboard(product, is_favorite, quantity)
         else:
-             text = product_text(product) + '\nНет в наличии'
+             text += '\nНет в наличии'
              keyboard = kb.not_available_product_keyboard(product)
-        await callback.message.edit_media(
-                media=InputMediaPhoto(
-                    media=photo,
-                    caption=text
-                ),
-                reply_markup=keyboard
-            )
+
+        if product.image_id:
+            media = InputMediaPhoto(media=product.image_id, caption=text)
+        else:
+            if product.image:
+                photo_path = os.path.join(MEDIA_FOLDER_PATH, product.image)
+            else:
+                photo_path = os.path.join(MEDIA_FOLDER_PATH, 'no_photo.png')
+
+            photo = FSInputFile(photo_path)
+            message = await callback.message.answer_photo(photo=photo, caption=text, reply_markup=keyboard)
+            product.image_id = message.photo[-1].file_id
+            await session.commit()
+            await callback.message.delete()
+            return
+
+        await callback.message.edit_media(media=media, reply_markup=keyboard)
     logger.info(f'🍏 Пользователь {callback.from_user.id} просматривает товар {product_id} - {product.name} из категории {product.category_id} - {product.category.name}')
