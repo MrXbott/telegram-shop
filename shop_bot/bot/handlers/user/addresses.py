@@ -23,7 +23,7 @@ async def user_addresses(msg: Message|CallbackQuery, session: AsyncSession):
     user_id = msg.from_user.id
     addresses = await crud.get_user_addresses(session, user_id)
     if not addresses:
-        await msg.answer('Здесь будут ваши адреса доставки. Пока адресов нет.')
+        await msg.answer('Здесь будут ваши адреса доставки. Пока адресов нет.', reply_markup=kb.add_address_keyboard())
         return
     text = 'Список ваших адресов доставки:'
     keyboard = kb.address_list_keyboard(addresses)
