@@ -11,6 +11,14 @@ def cart_text(products: List[ProductInCart]) -> str:
     return 'Товары в корзине: \n' + '\n'.join(lines) + f'\n\n<b>Итого:</b> {total}₽'
 
 def order_text(order: Order, items: List[OrderItem]) -> str:
-    text = f'Заказ <b>№{order.id}</b> \nОформлен: <b>{order.created.strftime("%d.%m.%Y %H:%M")}</b> \nСтоимость: <b>{order.total_price}₽</b> \n\nТовары в заказе: \n'
-    lines = [f'• {item.product.name} - {item.product.price}₽ - {item.quantity} шт.' for item in items]
+    text = (
+        f'Заказ <b>№{order.id}</b>\n'
+        f'Оформлен: <b>{order.created.strftime("%d.%m.%Y %H:%M")}</b>\n'
+        f'Адрес доставки: <b>{order.address.address}</b>\n'
+        f'Заказчик: <b>{order.name}</b>\n'
+        f'Телефон: <b>{order.phone}</b>\n'
+        f'Стоимость: <b>{order.total_price}₽</b>\n\n'
+        f'Товары в заказе: \n'
+        )
+    lines = [f'<b>• {item.product.name}</b> - {item.product.price}₽ x {item.quantity} шт. = <b>{item.product.price * item.quantity}₽</b>' for item in items]
     return text + '\n'.join(lines)
