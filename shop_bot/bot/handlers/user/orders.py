@@ -5,7 +5,6 @@ from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 import logging
-import re
 
 import keyboards.user_kb as kb
 from keyboards.addresses import choosing_address_keyboard
@@ -54,11 +53,13 @@ async def use_saved_address(callback: CallbackQuery, state: FSMContext, session:
         return
     
     await state.update_data(address_id=address.id)
+    await callback.message.edit_reply_markup()
     await callback.message.answer('Введите ваше имя:')
     await state.set_state(PlaceAnOrder.waiting_for_name)
 
 @router.callback_query(F.data == 'enter_new_address', PlaceAnOrder.choosing_address)
 async def enter_new_address(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_reply_markup()
     await callback.message.answer('Укажите адрес доставки: \nУлицу, дом, подъезд, квартиру и этаж:')
     await state.set_state(PlaceAnOrder.waiting_for_address_text)
 
