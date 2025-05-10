@@ -13,6 +13,7 @@ def cart_text(products: List[ProductInCart]) -> str:
 def order_text(order: Order, items: List[OrderItem]) -> str:
     text = (
         f'Заказ <b>№{order.id}</b>\n'
+        f'Статус: <b>{order.status.status_name}</b>\n'
         f'Оформлен: <b>{order.created.strftime("%d.%m.%Y %H:%M")}</b>\n'
         f'Адрес доставки: <b>{order.address.address}</b>\n'
         f'Заказчик: <b>{order.name}</b>\n'

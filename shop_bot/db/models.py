@@ -97,7 +97,7 @@ class Order(Base):
     total_price: Mapped[Numeric] = mapped_column(Numeric(10,2), nullable=False)
 
     items = relationship('OrderItem', back_populates='order', lazy='selectin', cascade='all, delete-orphan')
-    status: Mapped['OrderStatus'] = relationship(back_populates='orders')
+    status: Mapped['OrderStatus'] = relationship(back_populates='orders', lazy='selectin')
     address: Mapped[Address] = relationship(Address, lazy='joined')
 
     __table_args__ = (

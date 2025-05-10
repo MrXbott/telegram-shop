@@ -94,7 +94,7 @@ def favorites_keyboard(favorites: List[Favorite]):
 def orders_keyboard(orders: List[Order]):
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=f'№ {order.id} - {order.created.strftime("%d.%m.%Y %H:%M")}', callback_data=f'order_{order.id}')] for order in orders
+            [InlineKeyboardButton(text=f'№ {order.id} - {order.created.strftime("%d.%m.%Y %H:%M")} - {order.status.status_name}', callback_data=f'order_{order.id}')] for order in orders
         ]
     )
 
