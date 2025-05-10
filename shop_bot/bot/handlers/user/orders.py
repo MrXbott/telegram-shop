@@ -35,7 +35,7 @@ async def add_order_details(callback: CallbackQuery, state: FSMContext, session:
     addresses = await crud.get_user_addresses(session, user_id)
     logger.info(f'📦 Пользователь {user_id} начал оформлять заказ.')
     if addresses:
-        await callback.message.answer('Выберите адрес доставки или введите новый:', reply_markup=choosing_address_keyboard(addresses))
+        await callback.message.edit_text('Выберите адрес доставки или введите новый:', reply_markup=choosing_address_keyboard(addresses))
         await state.set_state(PlaceAnOrder.choosing_address)
     else:
         await callback.message.answer('Укажите адрес доставки: \nУлицу, дом, подъезд, квартиру и этаж:')
@@ -53,14 +53,13 @@ async def use_saved_address(callback: CallbackQuery, state: FSMContext, session:
         return
     
     await state.update_data(address_id=address.id)
-    await callback.message.edit_reply_markup()
+    await callback.message.edit_text(f'Вы указали адрес: <b>{address.address}</b>')
     await callback.message.answer('Введите ваше имя:')
     await state.set_state(PlaceAnOrder.waiting_for_name)
 
 @router.callback_query(F.data == 'enter_new_address', PlaceAnOrder.choosing_address)
 async def enter_new_address(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_reply_markup()
-    await callback.message.answer('Укажите адрес доставки: \nУлицу, дом, подъезд, квартиру и этаж:')
+    await callback.message.edit_text('Укажите адрес доставки: \nУлицу, дом, подъезд, квартиру и этаж:')
     await state.set_state(PlaceAnOrder.waiting_for_address_text)
 
 @router.message(PlaceAnOrder.waiting_for_address_text)
