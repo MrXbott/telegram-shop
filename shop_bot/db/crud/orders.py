@@ -4,7 +4,7 @@ from sqlalchemy import select
 from typing import List
 import logging
 
-from db.models import Order, OrderItem, Address
+from db.models import Order, OrderItem, OrderStatus, Address
 from db.cart import get_cart
 from utils.decorators import db_errors
 from exceptions.orders import InvalidOrderTotalPriceError
@@ -37,9 +37,15 @@ async def create_order(session: AsyncSession, user_id: int, data: dict) -> Order
         address = Address(user_id=user_id, address=address_text)
         session.add(address)
         await session.flush()
+    
+    result = await session.execute(select(OrderStatus.id).filter(OrderStatus.status == 'created'))
+    default_status_id = result.scalar_one_or_none()
+    if default_status_id is None:
+        raise ValueError('Статус created не найден в базе данных. Невозможно создать заказ.')
 
     order = Order(
                 user_id=user_id, 
+                status_id = default_status_id,
                 address_id=address.id, 
                 name=data.get('name'),
                 phone=data.get('phone'),

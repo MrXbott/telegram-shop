@@ -2,7 +2,7 @@ from sqlalchemy import Integer, String, ForeignKey, Boolean, DateTime, Numeric, 
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column, validates
 from typing import List
 from datetime import datetime
-import re
+
 
 class Base(DeclarativeBase): 
     pass
@@ -13,7 +13,6 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False) 
     name: Mapped[str] = mapped_column(String)
-
 
 
 class Category(Base):
@@ -75,18 +74,30 @@ class Address(Base):
     )
 
 
+class OrderStatus(Base):
+    __tablename__ = 'order_statuses'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    status: Mapped[str] = mapped_column(String(30), unique=True, nullable=False) 
+    status_name: Mapped[str] = mapped_column(String(100), nullable=False) 
+
+    orders: Mapped[list['Order']] = relationship(back_populates='status')
+
+
 class Order(Base):
     __tablename__ = 'orders'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
     created: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    status_id: Mapped[int] = mapped_column(ForeignKey('order_statuses.id'), nullable=False)
     address_id: Mapped[int] = mapped_column(Integer, ForeignKey('addresses.id'), nullable=False) 
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     phone: Mapped[str] = mapped_column(String(20), nullable=False)
     total_price: Mapped[Numeric] = mapped_column(Numeric(10,2), nullable=False)
 
     items = relationship('OrderItem', back_populates='order', lazy='selectin', cascade='all, delete-orphan')
+    status: Mapped['OrderStatus'] = relationship(back_populates='orders')
     address: Mapped[Address] = relationship(Address, lazy='joined')
 
     __table_args__ = (
