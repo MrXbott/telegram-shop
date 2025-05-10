@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 import logging
@@ -54,7 +54,7 @@ async def use_saved_address(callback: CallbackQuery, state: FSMContext, session:
     
     await state.update_data(address_id=address.id)
     await callback.message.edit_text(f'Вы указали адрес: <b>{address.address}</b>')
-    await callback.message.answer('Введите ваше имя:')
+    await callback.message.answer('Введите ваше имя:', reply_markup=kb.order_name_keyboard())
     await state.set_state(PlaceAnOrder.waiting_for_name)
 
 @router.callback_query(F.data == 'enter_new_address', PlaceAnOrder.choosing_address)
@@ -72,9 +72,16 @@ async def add_order_address(message: Message, state: FSMContext):
     
     logger.info(f'ℹ️ Пользователь {message.from_user.id} ввел адрес: {message.text}.')
     await state.update_data(address_text=address)
-    await message.answer('Введите ваше имя:')
+    await message.answer('Введите ваше имя:', reply_markup=kb.order_name_keyboard())
     await state.set_state(PlaceAnOrder.waiting_for_name)
 
+@router.message(PlaceAnOrder.waiting_for_name, F.text == '👤 Использовать имя из профиля')
+async def handle_user_name(message: Message, state: FSMContext, session: AsyncSession):
+    name = message.from_user.full_name
+    await state.update_data(name=name)
+    await message.answer(f'Ваше имя из профиля: <b>{name}</b>')
+    await message.answer('Введите ваш номер телефона:', reply_markup=kb.order_phone_keyboard())
+    await state.set_state(PlaceAnOrder.waiting_for_phone)
 
 @router.message(PlaceAnOrder.waiting_for_name)
 async def add_order_name(message: Message, state: FSMContext):
@@ -86,14 +93,22 @@ async def add_order_name(message: Message, state: FSMContext):
     
     logger.info(f'ℹ️ Пользователь {message.from_user.id} ввел имя: {message.text}.')
     await state.update_data(name=name)
-    await message.answer('Введите ваш номер телефона:')
+    await message.answer(f'Ваше имя: <b>{name}</b>')
+    await message.answer('Введите ваш номер телефона:', reply_markup=kb.order_phone_keyboard())
     await state.set_state(PlaceAnOrder.waiting_for_phone)
 
+@router.message(PlaceAnOrder.waiting_for_phone, F.contact)
+async def handle_contact(message: Message, state: FSMContext, session: AsyncSession):
+    phone = message.contact.phone_number
+    await state.update_data(phone=normalize_phone(phone))
+    logger.info(f'ℹ️ Пользователь {message.from_user.id} отправил телефон: {phone}.')
+    await show_order_details(message, state, session)
 
-@router.message(PlaceAnOrder.waiting_for_phone)
+@router.message(PlaceAnOrder.waiting_for_phone, F.text)
 async def add_order_phone(message: Message, state: FSMContext, session: AsyncSession):
     user_id = message.from_user.id
-    phone = message.text.strip()    
+    phone = message.text.strip()  
+
     if not is_valid_phone(phone):
         await message.answer('❌ Некорректный номер телефона. Введите в формате: +7XXXXXXXXXX')
         logger.warning(f'ℹ️ Пользователь {user_id} ввел некорректный номер телефона: {message.text}.')
@@ -101,6 +116,11 @@ async def add_order_phone(message: Message, state: FSMContext, session: AsyncSes
     
     await state.update_data(phone=normalize_phone(phone))
     logger.info(f'ℹ️ Пользователь {message.from_user.id} ввел телефон: {message.text}.')
+    await message.answer(f'Ваш номер телефона: <b>{phone}</b>', reply_markup=ReplyKeyboardRemove())
+    await show_order_details(message, state, session)
+
+async def show_order_details(message: Message, state: FSMContext, session: AsyncSession):
+    user_id = message.from_user.id
     data = await state.get_data()
     address_id = data.get('address_id')
     address_text = data.get('address_text')
@@ -110,10 +130,9 @@ async def add_order_phone(message: Message, state: FSMContext, session: AsyncSes
         address = await crud.get_address(session, user_id, address_id)
     text = (
         f'Проверьте ваши данные:\n\n'
-        f'📍 Адрес: {address.address if address else address_text}\n'
-        f'👤 Имя: {data['name']}\n'
-        f'📞 Телефон: {data['phone']}\n\n'
-        f'Все верно?'
+        f'📍 Адрес: <b>{address.address if address else address_text}</b>\n'
+        f'👤 Имя: <b>{data['name']}</b>\n'
+        f'📞 Телефон: <b>{data['phone']}</b>\n\n'
     )
     await message.answer(text, reply_markup=kb.confirm_order_details_keyboard())
     await state.set_state(PlaceAnOrder.waiting_for_confirmation)
@@ -135,7 +154,8 @@ async def place_an_order(callback: CallbackQuery, state: FSMContext, session: As
         order = await crud.create_order(session, user_id, data)
         await cart.clear_cart(user_id)
         await state.clear()
-        await callback.message.edit_text(f'✅ Заказ №{order.id} оформлен! Мы свяжемся с вами.')
+        await callback.message.delete_reply_markup()
+        await callback.message.answer(f'✅ Заказ <b>№{order.id}</b> оформлен! Мы свяжемся с вами.', reply_markup=kb.main_keyboard())
         logger.info(f'✅📦 Пользователь {user_id} оформил заказ №{order.id}')
     except ProductOutOfStockError as e:
         await callback.message.answer('⚠️Недостаточно товара в наличии чтобы оформить заказ')

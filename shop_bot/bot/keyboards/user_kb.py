@@ -106,6 +106,24 @@ def order_keyboard():
         ]
     )
 
+def order_name_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text='👤 Использовать имя из профиля')]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+
+def order_phone_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text='Отправить мой номер', request_contact=True)]
+        ],
+        resize_keyboard=True, 
+        one_time_keyboard=True
+    )
+
 def confirm_order_details_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
