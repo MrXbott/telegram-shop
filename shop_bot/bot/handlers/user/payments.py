@@ -1,16 +1,21 @@
-from aiogram.types import Message, PreCheckoutQuery, SuccessfulPayment
+from aiogram.types import Message, CallbackQuery, PreCheckoutQuery, SuccessfulPayment, LabeledPrice
 from aiogram import Router, F
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
+from dotenv import load_dotenv
 import logging
+import os
 
 from db import crud
 from keyboards import user_kb as kb
 from texts import successful_payment_text
+from utils.decorators import handle_db_errors
+from services.invoices import send_order_invoice
 
-
+load_dotenv()
 logger = logging.getLogger(__name__)
 router = Router()
+PROVIDER_TOKEN = os.environ.get('PROVIDER_TOKEN')
 
 @router.pre_checkout_query()
 async def process_pre_checkout_query(pre_checkout_q: PreCheckoutQuery):
@@ -40,3 +45,15 @@ async def successful_payment_handler(message: Message, session: AsyncSession):
     
     logger.info(f'✅ Оплата заказа № {order_id} прошла успешно!')
     await message.answer(text=successful_payment_text(payment, order), reply_markup=kb.main_keyboard())
+
+
+@router.callback_query(F.data.startswith('pay_for_the_order_'))
+@handle_db_errors()
+async def pay_for_the_order(callback: CallbackQuery, session: AsyncSession):
+    user_id = callback.from_user.id
+    order_id = int(callback.data.split('_')[-1])
+    order = await crud.get_order(session, user_id, order_id)
+    logger.info(f'📦 Пользователь {user_id} хочет оплатить заказ №{order.id}.')
+
+    await send_order_invoice(callback.bot, callback.message.chat.id, order, PROVIDER_TOKEN)
+    

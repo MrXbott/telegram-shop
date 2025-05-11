@@ -17,6 +17,7 @@ from utils.decorators import handle_db_errors
 from utils.validators import is_valid_phone, normalize_phone, is_valid_name, is_valid_address
 from texts import order_text
 from exceptions.products import ProductOutOfStockError
+from services.invoices import send_order_invoice
 
 
 load_dotenv()
@@ -160,26 +161,7 @@ async def place_an_order(callback: CallbackQuery, state: FSMContext, session: As
         await crud.order_set_status_waiting_for_payment(session, order.id)
         await cart.clear_cart(user_id)
 
-        await callback.bot.send_invoice(
-                                chat_id=callback.message.chat.id,
-                                title=f'Заказ №{order.id}',
-                                description='Оплата заказа из нашего магазина',
-                                payload=str(order.id), 
-                                provider_token=PROVIDER_TOKEN, 
-                                currency='RUB',
-                                prices=[
-                                    LabeledPrice(label=f'Оплата заказа №{order.id}', amount=order.total_price*100),  
-                                ],
-                                start_parameter=f'order-payment-{order.id}', 
-                                photo_url='', 
-                                photo_height=512,
-                                photo_width=512,
-                                photo_size=512,
-                                need_name=False,          
-                                need_phone_number=False,  
-                                need_email=False,         
-                                is_flexible=False         
-                            )
+        await send_order_invoice(callback.bot, callback.message.chat.id, order, PROVIDER_TOKEN)
         
         await state.clear()
         await callback.message.delete_reply_markup()
@@ -205,7 +187,7 @@ async def show_order(callback: CallbackQuery, session: AsyncSession):
 
     order = await crud.get_order(session, user_id, order_id)
     if order:
-        await callback.message.edit_text(text=order_text(order, order.items), reply_markup=kb.order_keyboard()) 
+        await callback.message.edit_text(text=order_text(order, order.items), reply_markup=kb.order_details_keyboard(order)) 
 
 
 async def show_orders(msg: Message|CallbackQuery, session: AsyncSession):

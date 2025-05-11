@@ -99,12 +99,12 @@ def orders_keyboard(orders: List[Order]):
     )
 
 
-def order_keyboard():
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text='⬅️ Назад к заказам', callback_data='back_to_orders')]
-        ]
-    )
+def order_details_keyboard(order: Order):
+    btns = []
+    if order.status.status == 'waiting_for_payment':
+        btns.append([InlineKeyboardButton(text='💳 Оплатить', callback_data=f'pay_for_the_order_{order.id}')])
+    btns.append([InlineKeyboardButton(text='⬅️ Назад к заказам', callback_data='back_to_orders')])
+    return InlineKeyboardMarkup(inline_keyboard=btns)
 
 def order_name_keyboard():
     return ReplyKeyboardMarkup(
