@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-import keyboards.user_kb as kb
+import bot.keyboards.user_kb as kb
 from db import crud
 from utils.decorators import handle_db_errors
 

@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
 from config import MEDIA_FOLDER_PATH
-import keyboards.user_kb as kb
-from texts import product_text
+import bot.keyboards.user_kb as kb
+from bot.texts import product_text
 from db import crud, cart
 from utils.decorators import handle_db_errors
 

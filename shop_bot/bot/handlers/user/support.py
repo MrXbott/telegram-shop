@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import keyboards.user_kb as kb
+import bot.keyboards.user_kb as kb
 
 
 router = Router()

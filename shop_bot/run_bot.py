@@ -21,7 +21,7 @@ class RestartOnChangeHandler(FileSystemEventHandler):
 
     def run_script(self):
         print(f'🚀 {datetime.now().strftime('%d.%m.%Y %H:%M:%S')} Запуск: python {self.script_name}')
-        return subprocess.Popen([sys.executable, self.script_name])
+        return subprocess.Popen([sys.executable, '-m', 'bot.bot'])
 
     def on_any_event(self, event):
         if event.src_path.endswith('.py'):

@@ -3,8 +3,8 @@ from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-import keyboards.user_kb as kb
-from texts import cart_text
+import bot.keyboards.user_kb as kb
+from bot.texts import cart_text
 from db import crud, cart
 from utils.decorators import handle_db_errors
 

@@ -101,16 +101,21 @@ async def get_order(session: AsyncSession, user_id: int, order_id: int) -> Order
                             select(Order)
                             .where(Order.user_id==user_id, Order.id==order_id)
                             .options(selectinload(Order.items).selectinload(OrderItem.product))
-    )
+                            )
     return result.scalar_one() 
 
 
 @db_errors()
-async def order_set_status_waiting_for_payment(session: AsyncSession, order_id: int) -> Order:
-    result = await session.execute(select(OrderStatus.id).filter(OrderStatus.status == 'waiting_for_payment'))
-    waiting_for_payment_status_id = result.scalar_one()
+async def get_status_id(session: AsyncSession, status_code: str) -> int:
+    result = await session.execute(select(OrderStatus.id).filter(OrderStatus.status == status_code))
+    return result.scalar_one()
 
-    await session.execute(update(Order).where(Order.id == order_id).values(status_id=waiting_for_payment_status_id))
+
+@db_errors()
+async def update_order_status(session: AsyncSession, order_id: int, status: str) -> Order:
+    status_id = await get_status_id(session, status)
+
+    await session.execute(update(Order).where(Order.id == order_id).values(status_id=status_id))
     await session.commit()
 
     result = await session.execute(select(Order).where(Order.id == order_id))
@@ -118,13 +123,17 @@ async def order_set_status_waiting_for_payment(session: AsyncSession, order_id: 
 
 
 @db_errors()
-async def order_set_status_paid(session: AsyncSession, order_id: int) -> Order:
-    result = await session.execute(select(OrderStatus.id).filter(OrderStatus.status == 'paid'))
-    paid_status_id = result.scalar_one()
+async def return_cancelled_order_items(session: AsyncSession, order_id: int):
+    result = await session.execute(
+                            select(Order)
+                            .where(Order.id==order_id)
+                            .options(selectinload(Order.items).selectinload(OrderItem.product))
+                            )
+    order = result.scalar_one() 
 
-    await session.execute(update(Order).where(Order.id == order_id).values(status_id=paid_status_id))
+    for item in order.items:
+        item.product.quantity_in_stock += item.quantity
+
     await session.commit()
 
-    result = await session.execute(select(Order).where(Order.id == order_id))
-    return result.scalar_one()
 

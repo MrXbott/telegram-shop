@@ -2,20 +2,17 @@ from aiogram.types import Message, CallbackQuery, PreCheckoutQuery, SuccessfulPa
 from aiogram import Router, F
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
-from dotenv import load_dotenv
 import logging
-import os
 
 from db import crud
-from keyboards import user_kb as kb
-from texts import successful_payment_text
+from bot.keyboards import user_kb as kb
+from bot.texts import successful_payment_text
 from utils.decorators import handle_db_errors
-from services.invoices import send_order_invoice
+from bot.services.invoices import send_order_invoice
+from config import PROVIDER_TOKEN
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 router = Router()
-PROVIDER_TOKEN = os.environ.get('PROVIDER_TOKEN')
 
 @router.pre_checkout_query()
 async def process_pre_checkout_query(pre_checkout_q: PreCheckoutQuery):
@@ -33,7 +30,7 @@ async def successful_payment_handler(message: Message, session: AsyncSession):
         return
 
     try:
-        order = await crud.order_set_status_paid(session, order_id)
+        order = await crud.update_order_status(session, order_id, 'paid')
     except SQLAlchemyError as e:
         logger.error(f'❌ Ошибка базы данных при установке статуса "paid" для заказа {order_id}', exc_info=True)
         await message.answer(f'❌ Не удалось обновить статус оплаты. Номер заказа: <b>{order_id}</b>. Свяжитесь с поддержкой.', reply_markup=kb.main_keyboard())

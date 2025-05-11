@@ -5,7 +5,7 @@ from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-import keyboards.addresses as kb
+import bot.keyboards.addresses as kb
 from db import crud
 from db.models import Address
 from utils.validators import is_valid_address

@@ -3,12 +3,12 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from decouple import config
 
-from handlers import user
-from handlers.admin import admin
+from bot.handlers import user
+from bot.handlers.admin import admin
 from db.init import init_db, async_session_maker
-from middlewares.session import DBSessionMiddleware
-from middlewares.error_logging import ErrorLoggingMiddleware
-from commands import set_commands
+from bot.middlewares.session import DBSessionMiddleware
+from bot.middlewares.error_logging import ErrorLoggingMiddleware
+from bot.commands import set_commands
 from logging_config import setup_logging
 
 

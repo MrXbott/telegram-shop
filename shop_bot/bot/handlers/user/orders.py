@@ -5,23 +5,21 @@ from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove, LabeledPr
 from aiogram.exceptions import TelegramBadRequest
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
-from dotenv import load_dotenv
 import logging
-import os
 
-import keyboards.user_kb as kb
-from keyboards.addresses import choosing_address_keyboard
+import bot.keyboards.user_kb as kb
+from bot.keyboards.addresses import choosing_address_keyboard
 from db import crud, cart
 from db.cart import ProductInCart
 from utils.decorators import handle_db_errors
 from utils.validators import is_valid_phone, normalize_phone, is_valid_name, is_valid_address
-from texts import order_text
+from bot.texts import order_text
 from exceptions.products import ProductOutOfStockError
-from services.invoices import send_order_invoice
+from bot.services.invoices import send_order_invoice
+from bot.tasks import cancel_unpaid_order
+from config import PROVIDER_TOKEN, UNPAID_ORDER_TIMEOUT
 
 
-load_dotenv()
-PROVIDER_TOKEN = os.environ.get('PROVIDER_TOKEN')
 logger = logging.getLogger(__name__)
 router = Router()
 
@@ -158,7 +156,10 @@ async def place_an_order(callback: CallbackQuery, state: FSMContext, session: As
     
     try:
         order = await crud.create_order(session, user_id, data)
-        await crud.order_set_status_waiting_for_payment(session, order.id)
+        await crud.update_order_status(session, order.id, 'waiting_for_payment')
+
+        cancel_unpaid_order.apply_async(args=[user_id, order.id], countdown=UNPAID_ORDER_TIMEOUT)
+
         await cart.clear_cart(user_id)
 
         await send_order_invoice(callback.bot, callback.message.chat.id, order, PROVIDER_TOKEN)
