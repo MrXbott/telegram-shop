@@ -1,4 +1,5 @@
 from typing import List
+from aiogram.types import SuccessfulPayment
 from db.models import Product, Order, OrderItem
 from db.cart import ProductInCart
 
@@ -23,3 +24,10 @@ def order_text(order: Order, items: List[OrderItem]) -> str:
         )
     lines = [f'<b>• {item.product.name}</b> - {item.product.price}₽ x {item.quantity} шт. = <b>{item.product.price * item.quantity}₽</b>' for item in items]
     return text + '\n'.join(lines)
+
+def successful_payment_text(payment: SuccessfulPayment, order: Order):
+    return (f'✅ Оплата прошла успешно!\n\n'
+            f'Номер заказа: <b>{order.id}</b>\n'
+            f'Статус: <b>{order.status.status_name}</b>\n'
+            f'Сумма: <b>{payment.total_amount / 100:.2f} {payment.currency}</b>\n'
+            )

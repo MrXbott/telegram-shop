@@ -1,10 +1,13 @@
 from aiogram import Router, F
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove, LabeledPrice
+from aiogram.exceptions import TelegramBadRequest
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+from dotenv import load_dotenv
 import logging
+import os
 
 import keyboards.user_kb as kb
 from keyboards.addresses import choosing_address_keyboard
@@ -16,6 +19,8 @@ from texts import order_text
 from exceptions.products import ProductOutOfStockError
 
 
+load_dotenv()
+PROVIDER_TOKEN = os.environ.get('PROVIDER_TOKEN')
 logger = logging.getLogger(__name__)
 router = Router()
 
@@ -138,7 +143,7 @@ async def show_order_details(message: Message, state: FSMContext, session: Async
     await state.set_state(PlaceAnOrder.waiting_for_confirmation)
 
 
-@router.callback_query(F.data == 'confirm_order')
+@router.callback_query(F.data == 'confirm_order_and_pay')
 @handle_db_errors()
 async def place_an_order(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     user_id = callback.from_user.id
@@ -152,16 +157,42 @@ async def place_an_order(callback: CallbackQuery, state: FSMContext, session: As
     
     try:
         order = await crud.create_order(session, user_id, data)
+        await crud.order_set_status_waiting_for_payment(session, order.id)
         await cart.clear_cart(user_id)
+
+        await callback.bot.send_invoice(
+                                chat_id=callback.message.chat.id,
+                                title=f'Заказ №{order.id}',
+                                description='Оплата заказа из нашего магазина',
+                                payload=str(order.id), 
+                                provider_token=PROVIDER_TOKEN, 
+                                currency='RUB',
+                                prices=[
+                                    LabeledPrice(label=f'Оплата заказа №{order.id}', amount=order.total_price*100),  
+                                ],
+                                start_parameter=f'order-payment-{order.id}', 
+                                photo_url='', 
+                                photo_height=512,
+                                photo_width=512,
+                                photo_size=512,
+                                need_name=False,          
+                                need_phone_number=False,  
+                                need_email=False,         
+                                is_flexible=False         
+                            )
+        
         await state.clear()
         await callback.message.delete_reply_markup()
-        await callback.message.answer(f'✅ Заказ <b>№{order.id}</b> оформлен! Мы свяжемся с вами.', reply_markup=kb.main_keyboard())
-        logger.info(f'✅📦 Пользователь {user_id} оформил заказ №{order.id}')
+        logger.info(f'✅📦 Пользователь {user_id} оформил заказ №{order.id} и получил счёт на оплату.')
+
     except ProductOutOfStockError as e:
-        await callback.message.answer('⚠️Недостаточно товара в наличии чтобы оформить заказ')
+        await callback.message.answer('⚠️Недостаточно товара в наличии чтобы оформить заказ', reply_markup=kb.main_keyboard())
         logger.error(f'❌ Недостаточно товара в наличии чтобы оформить заказ: {e}', exc_info=True)
+    except TelegramBadRequest as e:
+        await callback.message.answer(f'❌ Произошла ошибка при совершении платежа. Попробуйте еще раз. Номер вашего заказа: <b>{order.id}</b>', reply_markup=kb.main_keyboard())
+        logger.error(f'❌ Произошла ошибка при совершении платежа.: {e}', exc_info=True)
     except Exception as e:
-        await callback.message.answer(f'❌ Произошла ошибка при оформлении заказа. Попробуйте еще раз.')
+        await callback.message.answer(f'❌ Произошла ошибка при оформлении заказа. Попробуйте еще раз.', reply_markup=kb.main_keyboard())
         logger.error(f'❌ Произошла ошибка при оформлении заказа: {e}', exc_info=True)
 
 

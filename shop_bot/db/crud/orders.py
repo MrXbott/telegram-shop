@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy import select
+from sqlalchemy import select, update
 from typing import List
 import logging
 
@@ -96,10 +96,35 @@ async def get_orders(session: AsyncSession, user_id: int) -> List[Order]:
 
 
 @db_errors()
-async def get_order(session: AsyncSession, user_id: int, order_id: int):
+async def get_order(session: AsyncSession, user_id: int, order_id: int) -> Order:
     result = await session.execute(
                             select(Order)
                             .where(Order.user_id==user_id, Order.id==order_id)
                             .options(selectinload(Order.items).selectinload(OrderItem.product))
     )
-    return result.scalar_one_or_none() 
+    return result.scalar_one() 
+
+
+@db_errors()
+async def order_set_status_waiting_for_payment(session: AsyncSession, order_id: int) -> Order:
+    result = await session.execute(select(OrderStatus.id).filter(OrderStatus.status == 'waiting_for_payment'))
+    waiting_for_payment_status_id = result.scalar_one()
+
+    await session.execute(update(Order).where(Order.id == order_id).values(status_id=waiting_for_payment_status_id))
+    await session.commit()
+
+    result = await session.execute(select(Order).where(Order.id == order_id))
+    return result.scalar_one()
+
+
+@db_errors()
+async def order_set_status_paid(session: AsyncSession, order_id: int) -> Order:
+    result = await session.execute(select(OrderStatus.id).filter(OrderStatus.status == 'paid'))
+    paid_status_id = result.scalar_one()
+
+    await session.execute(update(Order).where(Order.id == order_id).values(status_id=paid_status_id))
+    await session.commit()
+
+    result = await session.execute(select(Order).where(Order.id == order_id))
+    return result.scalar_one()
+

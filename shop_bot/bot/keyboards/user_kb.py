@@ -127,6 +127,6 @@ def order_phone_keyboard():
 def confirm_order_details_keyboard():
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text='✅ Оформить', callback_data='confirm_order')],
+            [InlineKeyboardButton(text='💳 Оплатить', callback_data='confirm_order_and_pay')],
             [InlineKeyboardButton(text='⬅️ Изменить данные', callback_data='details_for_order')]
     ])
