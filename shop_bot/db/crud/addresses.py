@@ -3,11 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from db.models import Address
-from utils.decorators import db_errors
+from utils.decorators import db_errors, make_async_session
 
 
 @db_errors()
-async def get_user_addresses(session: AsyncSession, user_id: int) -> List[Address]:
+@make_async_session
+async def get_user_addresses(user_id: int, session: AsyncSession) -> List[Address]:
     result = await session.execute(
                         select(Address)
                         .where(Address.user_id==user_id, Address.is_deleted==False)
@@ -16,7 +17,8 @@ async def get_user_addresses(session: AsyncSession, user_id: int) -> List[Addres
     return result.scalars().all()
 
 @db_errors()
-async def count_user_addresses(session: AsyncSession, user_id: int):
+@make_async_session
+async def count_user_addresses(user_id: int, session: AsyncSession):
     result = await session.execute(
                             select(func.count())
                             .select_from(Address)
@@ -25,7 +27,8 @@ async def count_user_addresses(session: AsyncSession, user_id: int):
     return result.scalar()
 
 @db_errors()
-async def get_address(session: AsyncSession, user_id: int, address_id: int) -> Address:
+@make_async_session
+async def get_address(user_id: int, address_id: int, session: AsyncSession) -> Address:
     result = await session.execute(
                             select(Address)
                             .where(Address.user_id==user_id, Address.id==address_id)
@@ -33,7 +36,8 @@ async def get_address(session: AsyncSession, user_id: int, address_id: int) -> A
     return result.scalar_one_or_none() 
 
 @db_errors()
-async def add_new_address(session: AsyncSession, user_id: int, address_str: str) -> Address:
+@make_async_session
+async def add_new_address(user_id: int, address_str: str, session: AsyncSession) -> Address:
     new_address: Address = Address(user_id=user_id, address=address_str)
     session.add(new_address)
     await session.commit()
@@ -42,7 +46,8 @@ async def add_new_address(session: AsyncSession, user_id: int, address_str: str)
 
 
 @db_errors()
-async def delete_address(session: AsyncSession, user_id: int, address_id: int) -> Address:
+@make_async_session
+async def delete_address(user_id: int, address_id: int, session: AsyncSession) -> Address:
     result = await session.execute(
                     select(Address)
                     .where(Address.user_id == user_id, Address.id == address_id)

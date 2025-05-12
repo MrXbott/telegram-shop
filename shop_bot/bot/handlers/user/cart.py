@@ -15,9 +15,9 @@ router = Router()
 
 @router.message(F.text.in_(['/cart', '🛒 Корзина']))
 @handle_db_errors()
-async def show_cart(message: Message, session: AsyncSession):
+async def show_cart(message: Message):
     logger.info(f'🛒 Пользователь {message.from_user.id} вызвал команду /cart')
-    products = await cart.get_cart(session, message.from_user.id)
+    products = await cart.get_cart(message.from_user.id)
     if not products:
         await message.answer('Корзина пуста.')
         return
@@ -26,13 +26,13 @@ async def show_cart(message: Message, session: AsyncSession):
     
 @router.callback_query(F.data.startswith('add_'))
 @handle_db_errors()
-async def add_product_to_cart(callback: CallbackQuery, session: AsyncSession):
+async def add_product_to_cart(callback: CallbackQuery):
     quantity = 1
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
     logger.info(f'📥 Пользователь {callback.from_user.id} добавил в корзину продукт {product_id}')
-    product = await crud.get_product(session, product_id)
-    is_favorite = await crud.is_in_favorites(session, user_id, product_id)
+    product = await crud.get_product(product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
     if product:
         await cart.add_to_cart(user_id, product_id, quantity)
         await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, quantity))
@@ -42,12 +42,12 @@ async def add_product_to_cart(callback: CallbackQuery, session: AsyncSession):
 
 @router.callback_query(F.data.startswith('increase_'))
 @handle_db_errors()
-async def increase_product_quantity(callback: CallbackQuery, session: AsyncSession):
+async def increase_product_quantity(callback: CallbackQuery):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
     quantity = await cart.get_product_quantity(user_id, product_id)
-    product = await crud.get_product(session, product_id)
-    is_favorite = await crud.is_in_favorites(session, user_id, product_id)
+    product = await crud.get_product(product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
 
     if product:
         if product.quantity_in_stock <= quantity:
@@ -61,13 +61,13 @@ async def increase_product_quantity(callback: CallbackQuery, session: AsyncSessi
 
 @router.callback_query(F.data.startswith('decrease_'))
 @handle_db_errors()
-async def decrease_product_quantity(callback: CallbackQuery, session: AsyncSession):
+async def decrease_product_quantity(callback: CallbackQuery):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
     quantity = await cart.get_product_quantity(user_id, product_id)
     new_quantity = await cart.decrease_quantity(user_id, product_id)
-    product = await crud.get_product(session, product_id)
-    is_favorite = await crud.is_in_favorites(session, user_id, product_id)
+    product = await crud.get_product(product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
     if product:
         await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, new_quantity))
     await callback.answer()
@@ -76,12 +76,12 @@ async def decrease_product_quantity(callback: CallbackQuery, session: AsyncSessi
 
 @router.callback_query(F.data.startswith('remove_'))
 @handle_db_errors()
-async def remove_product_from_cart(callback: CallbackQuery, session: AsyncSession):
+async def remove_product_from_cart(callback: CallbackQuery):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
     await cart.remove_from_cart(user_id, product_id)
-    product = await crud.get_product(session, product_id)
-    is_favorite = await crud.is_in_favorites(session, user_id, product_id)
+    product = await crud.get_product(product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
     if product:
         await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, quantity=0))
     await callback.answer('Удалено из корзины!')

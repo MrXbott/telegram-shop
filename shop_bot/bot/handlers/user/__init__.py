@@ -1,6 +1,6 @@
 from .addresses import router as addresses_router
 from .cart import router as cart_router
-from .catalog import router as catalog_router
+from .categories import router as categories_router
 from .favorites import router as favorites_router
 from .orders import router as orders_router
 from .products import router as products_router
@@ -12,7 +12,7 @@ from .payments import router as payments_router
 routers = (
             addresses_router,
             cart_router, 
-            catalog_router,
+            categories_router,
             favorites_router, 
             orders_router,
             products_router, 

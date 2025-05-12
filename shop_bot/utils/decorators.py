@@ -5,6 +5,8 @@ from redis.exceptions import RedisError, ConnectionError, TimeoutError
 import asyncio
 import logging
 
+from db.init import async_session_maker
+
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,19 @@ def redis_errors(log_message: str = ''):
                 return await func(*args, **kwargs)
             except (ConnectionError, TimeoutError, RedisError) as e:
                 logger.warning(f'Redis error in {func.__name__}: {log_message or str(e)}')
-                # Можно здесь вернуть None или выбросить своё исключение, если нужно
         return wrapper
     return decorator
+
+
+def make_async_session(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        async with async_session_maker() as session:
+            try:
+                return await func(*args, session=session, **kwargs)
+            except Exception as e:
+                await session.rollback()  
+                raise e 
+            finally:
+                await session.close()  
+    return wrapper

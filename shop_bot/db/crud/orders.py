@@ -6,7 +6,7 @@ import logging
 
 from db.models import Order, OrderItem, OrderStatus, Address
 from db.cart import get_cart
-from utils.decorators import db_errors
+from utils.decorators import db_errors, make_async_session
 from exceptions.orders import InvalidOrderTotalPriceError
 from exceptions.products import ProductOutOfStockError
 
@@ -14,7 +14,8 @@ from exceptions.products import ProductOutOfStockError
 logger = logging.getLogger(__name__)
 
 @db_errors()
-async def create_order(session: AsyncSession, user_id: int, data: dict) -> Order:   
+@make_async_session
+async def create_order(user_id: int, data: dict, session: AsyncSession) -> Order:   
     address_id = data.get('address_id')
     address_text = data.get('address_text')
 
@@ -54,7 +55,7 @@ async def create_order(session: AsyncSession, user_id: int, data: dict) -> Order
     session.add(order)
     await session.flush()
 
-    items = await get_cart(session, user_id)
+    items = await get_cart(user_id)
     order_items = []
     total_price = 0
     for item in items:
@@ -86,7 +87,8 @@ async def create_order(session: AsyncSession, user_id: int, data: dict) -> Order
 
 
 @db_errors()
-async def get_orders(session: AsyncSession, user_id: int) -> List[Order]:
+@make_async_session
+async def get_orders(user_id: int, session: AsyncSession) -> List[Order]:
     result = await session.execute(
                             select(Order)
                             .where(Order.user_id==user_id)
@@ -96,7 +98,8 @@ async def get_orders(session: AsyncSession, user_id: int) -> List[Order]:
 
 
 @db_errors()
-async def get_order(session: AsyncSession, user_id: int, order_id: int) -> Order:
+@make_async_session
+async def get_order(user_id: int, order_id: int, session: AsyncSession) -> Order:
     result = await session.execute(
                             select(Order)
                             .where(Order.user_id==user_id, Order.id==order_id)
@@ -106,14 +109,16 @@ async def get_order(session: AsyncSession, user_id: int, order_id: int) -> Order
 
 
 @db_errors()
-async def get_status_id(session: AsyncSession, status_code: str) -> int:
+@make_async_session
+async def get_status_id(status_code: str, session: AsyncSession) -> int:
     result = await session.execute(select(OrderStatus.id).filter(OrderStatus.status == status_code))
     return result.scalar_one()
 
 
 @db_errors()
-async def update_order_status(session: AsyncSession, order_id: int, status: str) -> Order:
-    status_id = await get_status_id(session, status)
+@make_async_session
+async def update_order_status(order_id: int, status: str, session: AsyncSession) -> Order:
+    status_id = await get_status_id(status)
 
     await session.execute(update(Order).where(Order.id == order_id).values(status_id=status_id))
     await session.commit()
@@ -123,7 +128,8 @@ async def update_order_status(session: AsyncSession, order_id: int, status: str)
 
 
 @db_errors()
-async def return_cancelled_order_items(session: AsyncSession, order_id: int):
+@make_async_session
+async def return_cancelled_order_items(order_id: int, session: AsyncSession):
     result = await session.execute(
                             select(Order)
                             .where(Order.id==order_id)

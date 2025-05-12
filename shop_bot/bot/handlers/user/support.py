@@ -9,5 +9,5 @@ router = Router()
 
 
 @router.message(F.text.in_(['/help', '💬 Поддержка']))
-async def contact_support(message: Message, session: AsyncSession):
+async def contact_support(message: Message):
     await message.answer('Здесь будут способы связи с поддержкой.')

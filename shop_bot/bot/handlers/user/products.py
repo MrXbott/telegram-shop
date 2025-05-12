@@ -8,6 +8,7 @@ from config import MEDIA_FOLDER_PATH
 import bot.keyboards.user_kb as kb
 from bot.texts import product_text
 from db import crud, cart
+from db.models import Product, Category
 from utils.decorators import handle_db_errors
 
 
@@ -17,14 +18,14 @@ router = Router()
 
 @router.callback_query(F.data.startswith('category_'))
 @handle_db_errors()
-async def show_products(callback: CallbackQuery, session: AsyncSession):
+async def show_products(callback: CallbackQuery):
     products_per_page = 3
     parts = callback.data.split('_')
     category_id = int(parts[1])
     offset = int(parts[2]) if len(parts) > 2 else 0
-    category = await crud.get_category(session, category_id)
-    total_products = await crud.count_products_in_category(session, category_id)
-    products = await crud.get_products_by_category_and_offset(session, category_id, offset, products_per_page)
+    category: Category = await crud.get_category(category_id)
+    total_products = await crud.count_products_in_category(category_id)
+    products: Product = await crud.get_products_by_category_and_offset(category_id, offset, products_per_page)
     
     if callback.message.content_type == ContentType.TEXT:
         await callback.message.edit_text(f'Товары в категории {category.name}', 
@@ -40,12 +41,12 @@ async def show_products(callback: CallbackQuery, session: AsyncSession):
 
 @router.callback_query(F.data.startswith('product_'))
 @handle_db_errors()
-async def show_product(callback: CallbackQuery, session: AsyncSession):
+async def show_product(callback: CallbackQuery):
     product_id = int(callback.data.split('_')[1])
     user_id = callback.from_user.id
-    product = await crud.get_product(session, product_id)
-    quantity = await cart.get_product_quantity(user_id, product_id)
-    is_favorite = await crud.is_in_favorites(session, user_id, product_id)
+    product: Product = await crud.get_product(product_id)
+    quantity= await cart.get_product_quantity(user_id, product_id)
+    is_favorite = await crud.is_in_favorites(user_id, product_id)
 
     if product:
         text = product_text(product) 
@@ -66,8 +67,10 @@ async def show_product(callback: CallbackQuery, session: AsyncSession):
 
             photo = FSInputFile(photo_path)
             message = await callback.message.answer_photo(photo=photo, caption=text, reply_markup=keyboard)
-            product.image_id = message.photo[-1].file_id
-            await session.commit()
+            image_id = message.photo[-1].file_id
+            await crud.update_product_image_id(product.id, image_id)
+            # product.image_id = message.photo[-1].file_id
+            # await session.commit()
             await callback.message.delete()
             return
 

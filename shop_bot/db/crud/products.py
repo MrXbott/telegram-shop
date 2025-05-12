@@ -1,17 +1,18 @@
 from typing import List
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
 from db.models import Product
-from utils.decorators import db_errors
+from utils.decorators import db_errors, make_async_session
 
 
 logger = logging.getLogger(__name__)
 
 
 @db_errors()
+@make_async_session
 async def get_all_products(session: AsyncSession) -> List[Product]:
     result = await session.execute(
                             select(Product)
@@ -22,17 +23,19 @@ async def get_all_products(session: AsyncSession) -> List[Product]:
 
 
 @db_errors()
-async def get_product(session: AsyncSession, product_id: int) -> Product:
+@make_async_session
+async def get_product(product_id: int, session: AsyncSession) -> Product:
     product = await session.execute(
                                 select(Product)
                                 .where(Product.id == product_id)
                                 .options(selectinload(Product.category))
                                 )
-    return product.scalar_one_or_none() 
+    return product.scalar_one() 
 
 
 @db_errors()
-async def get_products_by_ids(session: AsyncSession, product_ids: List[int]) -> List[Product]:
+@make_async_session
+async def get_products_by_ids(product_ids: List[int], session: AsyncSession) -> List[Product]:
     result = await session.execute(
                             select(Product)
                             .where(Product.id.in_(product_ids))
@@ -43,7 +46,8 @@ async def get_products_by_ids(session: AsyncSession, product_ids: List[int]) -> 
 
 
 @db_errors()
-async def get_products_by_category_and_offset(session: AsyncSession, category_id: int, offset: int, limit: int) -> List[Product]:
+@make_async_session
+async def get_products_by_category_and_offset(category_id: int, offset: int, limit: int, session: AsyncSession) -> List[Product]:
     result = await session.execute(
                             select(Product)
                             .where(Product.category_id == category_id)
@@ -55,8 +59,16 @@ async def get_products_by_category_and_offset(session: AsyncSession, category_id
 
 
 @db_errors()
-async def add_product(session: AsyncSession, name: str, price: int) -> None:
+@make_async_session
+async def add_product(name: str, price: int, session: AsyncSession) -> None:
     if price < 0:
         raise ValueError('Цена не может быть отрицательной')
     session.add(Product(name=name, price=price))
+    await session.commit()
+
+
+@db_errors()
+@make_async_session
+async def update_product_image_id(product_id: int, image_id: str, session: AsyncSession):
+    await session.execute(update(Product).where(Product.id==product_id).values(image_id=image_id))
     await session.commit()

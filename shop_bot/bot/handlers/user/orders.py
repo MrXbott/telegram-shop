@@ -34,9 +34,9 @@ class PlaceAnOrder(StatesGroup):
 
 
 @router.callback_query(F.data == 'details_for_order')
-async def add_order_details(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+async def add_order_details(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
-    addresses = await crud.get_user_addresses(session, user_id)
+    addresses = await crud.get_user_addresses(user_id)
     logger.info(f'📦 Пользователь {user_id} начал оформлять заказ.')
     if addresses:
         await callback.message.edit_text('Выберите адрес доставки или введите новый:', reply_markup=choosing_address_keyboard(addresses))
@@ -47,10 +47,10 @@ async def add_order_details(callback: CallbackQuery, state: FSMContext, session:
 
 
 @router.callback_query(F.data.startswith('use_address_'), PlaceAnOrder.choosing_address)
-async def use_saved_address(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+async def use_saved_address(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     address_id = int(callback.data.split('_')[-1])
-    address = await crud.get_address(session, user_id, address_id)
+    address = await crud.get_address(user_id, address_id)
     
     if not address or address.is_deleted:
         await callback.message.answer('Адрес не найден.')
@@ -80,7 +80,7 @@ async def add_order_address(message: Message, state: FSMContext):
     await state.set_state(PlaceAnOrder.waiting_for_name)
 
 @router.message(PlaceAnOrder.waiting_for_name, F.text == '👤 Использовать имя из профиля')
-async def handle_user_name(message: Message, state: FSMContext, session: AsyncSession):
+async def handle_user_name(message: Message, state: FSMContext):
     name = message.from_user.full_name
     await state.update_data(name=name)
     await message.answer(f'Ваше имя из профиля: <b>{name}</b>')
@@ -102,14 +102,14 @@ async def add_order_name(message: Message, state: FSMContext):
     await state.set_state(PlaceAnOrder.waiting_for_phone)
 
 @router.message(PlaceAnOrder.waiting_for_phone, F.contact)
-async def handle_contact(message: Message, state: FSMContext, session: AsyncSession):
+async def handle_contact(message: Message, state: FSMContext):
     phone = message.contact.phone_number
     await state.update_data(phone=normalize_phone(phone))
     logger.info(f'ℹ️ Пользователь {message.from_user.id} отправил телефон: {phone}.')
-    await show_order_details(message, state, session)
+    await show_order_details(message, state)
 
 @router.message(PlaceAnOrder.waiting_for_phone, F.text)
-async def add_order_phone(message: Message, state: FSMContext, session: AsyncSession):
+async def add_order_phone(message: Message, state: FSMContext):
     user_id = message.from_user.id
     phone = message.text.strip()  
 
@@ -121,9 +121,9 @@ async def add_order_phone(message: Message, state: FSMContext, session: AsyncSes
     await state.update_data(phone=normalize_phone(phone))
     logger.info(f'ℹ️ Пользователь {message.from_user.id} ввел телефон: {message.text}.')
     await message.answer(f'Ваш номер телефона: <b>{phone}</b>', reply_markup=ReplyKeyboardRemove())
-    await show_order_details(message, state, session)
+    await show_order_details(message, state)
 
-async def show_order_details(message: Message, state: FSMContext, session: AsyncSession):
+async def show_order_details(message: Message, state: FSMContext):
     user_id = message.from_user.id
     data = await state.get_data()
     address_id = data.get('address_id')
@@ -131,7 +131,7 @@ async def show_order_details(message: Message, state: FSMContext, session: Async
     
     address = None
     if address_id:
-        address = await crud.get_address(session, user_id, address_id)
+        address = await crud.get_address(user_id, address_id)
     text = (
         f'Проверьте ваши данные:\n\n'
         f'📍 Адрес: <b>{address.address if address else address_text}</b>\n'
@@ -144,19 +144,19 @@ async def show_order_details(message: Message, state: FSMContext, session: Async
 
 @router.callback_query(F.data == 'confirm_order_and_pay')
 @handle_db_errors()
-async def place_an_order(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+async def place_an_order(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
 
     # to do: check data 
     data = await state.get_data()
-    products: List[ProductInCart] = await cart.get_cart(session, user_id)
+    products: List[ProductInCart] = await cart.get_cart(user_id)
     if not products:
         await callback.answer('⚠️🛒 Невозможно оформить заказ: ваша корзина пуста.')
         return
     
     try:
-        order = await crud.create_order(session, user_id, data)
-        await crud.update_order_status(session, order.id, 'waiting_for_payment')
+        order = await crud.create_order(user_id, data)
+        await crud.update_order_status(order.id, 'waiting_for_payment')
 
         cancel_unpaid_order.apply_async(args=[user_id, order.id], countdown=UNPAID_ORDER_TIMEOUT)
 
@@ -181,19 +181,19 @@ async def place_an_order(callback: CallbackQuery, state: FSMContext, session: As
 
 @router.callback_query(F.data.startswith('order_'))
 @handle_db_errors()
-async def show_order(callback: CallbackQuery, session: AsyncSession):
+async def show_order(callback: CallbackQuery):
     user_id = callback.from_user.id
     order_id = int(callback.data.split('_')[1])
     logger.info(f'📦 Пользователь {user_id} хочет просмотреть заказ №{order_id}')
 
-    order = await crud.get_order(session, user_id, order_id)
+    order = await crud.get_order(user_id, order_id)
     if order:
         await callback.message.edit_text(text=order_text(order, order.items), reply_markup=kb.order_details_keyboard(order)) 
 
 
-async def show_orders(msg: Message|CallbackQuery, session: AsyncSession):
+async def show_orders(msg: Message|CallbackQuery):
     user_id = msg.from_user.id
-    orders = await crud.get_orders(session, user_id)
+    orders = await crud.get_orders(user_id)
     text = 'Вот ваши заказы: ' if orders else 'У вас пока нет зказов'
     keyboard = kb.orders_keyboard(orders) if orders else None
     if isinstance(msg, Message):
@@ -204,12 +204,12 @@ async def show_orders(msg: Message|CallbackQuery, session: AsyncSession):
 
 @router.message(F.text.in_(['/orders', '📦 Мои заказы']))
 @handle_db_errors()
-async def show_all_orders(message: Message, session: AsyncSession):
+async def show_all_orders(message: Message):
     logger.info(f'📦 Пользователь {message.from_user.id} вызвал команду /orders')
-    await show_orders(message, session)
+    await show_orders(message)
 
 
 @router.callback_query(F.data == 'back_to_orders')
-async def back_to_orders(callback: CallbackQuery, session: AsyncSession):
+async def back_to_orders(callback: CallbackQuery):
     logger.info(f'📦 Пользователь {callback.from_user.id} вернулся к списку заказов')
-    await show_orders(callback, session)
+    await show_orders(callback)

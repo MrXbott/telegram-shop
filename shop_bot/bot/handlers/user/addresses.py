@@ -19,9 +19,9 @@ class AddNewAddress(StatesGroup):
     waiting_for_address = State()
 
 
-async def user_addresses(msg: Message|CallbackQuery, session: AsyncSession):
+async def user_addresses(msg: Message|CallbackQuery):
     user_id = msg.from_user.id
-    addresses = await crud.get_user_addresses(session, user_id)
+    addresses = await crud.get_user_addresses(user_id)
     if not addresses:
         await msg.answer('Здесь будут ваши адреса доставки. Пока адресов нет.', reply_markup=kb.add_address_keyboard())
         return
@@ -34,21 +34,21 @@ async def user_addresses(msg: Message|CallbackQuery, session: AsyncSession):
 
 @router.message(F.text.in_(['/addresses', '🏠 Мои адреса']))
 @handle_db_errors()
-async def show_user_addresses(message: Message, session: AsyncSession):
+async def show_user_addresses(message: Message):
     logger.info(f'🏠 Пользователь {message.from_user.id} вызвал команду /addresses')
-    await user_addresses(message, session)
+    await user_addresses(message)
 
 @router.callback_query(F.data == 'back_to_addresses')
 @handle_db_errors()
-async def back_to_addresses(callback: CallbackQuery, session: AsyncSession):
+async def back_to_addresses(callback: CallbackQuery):
     logger.info(f'🏠 Пользователь {callback.from_user.id} вернулся к списку адресов')
-    await user_addresses(callback, session)
+    await user_addresses(callback)
 
 @router.callback_query(F.data == 'new_address')
-async def add_new_address(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+async def add_new_address(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     logger.info(f'🏠 Пользователь {user_id} хочет добавить новый адрес.')
-    address_count = await crud.count_user_addresses(session, user_id)
+    address_count = await crud.count_user_addresses(user_id)
     if address_count < 5:
         await callback.message.answer('Введите адрес: улица, дом, подъезд, квартира и этаж')
         await state.set_state(AddNewAddress.waiting_for_address)
@@ -57,7 +57,7 @@ async def add_new_address(callback: CallbackQuery, state: FSMContext, session: A
 
 @router.message(AddNewAddress.waiting_for_address)
 @handle_db_errors()
-async def save_new_address(message: Message, state: FSMContext, session: AsyncSession):
+async def save_new_address(message: Message, state: FSMContext):
     address = message.text.strip()
     if not is_valid_address(address):
         await message.answer('Некорректный формат фдреса. Введите еще раз.')
@@ -70,7 +70,7 @@ async def save_new_address(message: Message, state: FSMContext, session: AsyncSe
     data = await state.get_data()
     user_id = message.from_user.id
     try:
-        new_address: Address = await crud.add_new_address(session, user_id, data.get('address'))
+        new_address: Address = await crud.add_new_address(user_id, data.get('address'))
         await state.clear()
         await message.answer(f'✅ Ваш адрес добавлен: {new_address.address}')
         logger.info(f'✅ Пользователь {user_id} добавил адрес с id {new_address.id}')
@@ -79,20 +79,20 @@ async def save_new_address(message: Message, state: FSMContext, session: AsyncSe
 
 @router.callback_query(F.data.startswith('address_'))
 @handle_db_errors()
-async def show_address(callback: CallbackQuery, session: AsyncSession):
+async def show_address(callback: CallbackQuery):
     user_id = callback.from_user.id
     address_id = int(callback.data.split('_')[1])
     logger.info(f'📦 Пользователь {user_id} хочет просмотреть адрес {address_id}')
-    address = await crud.get_address(session, user_id, address_id)
+    address = await crud.get_address(user_id, address_id)
     await callback.message.edit_text(text=address.address, reply_markup=kb.address_details_keyboard(address))
 
 @router.callback_query(F.data.startswith('delete_address_'))
 @handle_db_errors()
-async def delete_address(callback: CallbackQuery, session: AsyncSession):
+async def delete_address(callback: CallbackQuery):
     user_id = callback.from_user.id
     address_id = int(callback.data.split('_')[-1])
     logger.info(f'❌🏠 Пользователь {user_id} хочет удалить адрес {address_id}')
-    address: Address = await crud.delete_address(session, user_id, address_id)
+    address: Address = await crud.delete_address(user_id, address_id)
     if address.is_deleted:
         await callback.message.edit_text(text='🏠❌ Адрес удален')
     else:

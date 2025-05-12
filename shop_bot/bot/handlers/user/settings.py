@@ -9,5 +9,5 @@ router = Router()
 
 
 @router.message(F.text == '⚙️ Настройки')
-async def show_settings(message: Message, session: AsyncSession):
+async def show_settings(message: Message):
     await message.answer('Здесь будут настройки.')

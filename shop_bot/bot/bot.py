@@ -6,7 +6,7 @@ from decouple import config
 from bot.handlers import user
 from bot.handlers.admin import admin
 from db.init import init_db, async_session_maker
-from bot.middlewares.session import DBSessionMiddleware
+# from bot.middlewares.session import DBSessionMiddleware
 from bot.middlewares.error_logging import ErrorLoggingMiddleware
 from bot.commands import set_commands
 from logging_config import setup_logging
@@ -19,7 +19,7 @@ async def main():
     bot = Bot(token=config('BOT_TOKEN'), default=DefaultBotProperties(parse_mode='HTML'))
     dp = Dispatcher()
 
-    dp.update.middleware(DBSessionMiddleware(async_session_maker))
+    # dp.update.middleware(DBSessionMiddleware(async_session_maker))
     dp.update.middleware(ErrorLoggingMiddleware())
 
     dp.include_routers(admin.router)

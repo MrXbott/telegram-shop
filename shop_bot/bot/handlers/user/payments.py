@@ -19,7 +19,7 @@ async def process_pre_checkout_query(pre_checkout_q: PreCheckoutQuery):
     await pre_checkout_q.answer(ok=True)
 
 @router.message(F.successful_payment)
-async def successful_payment_handler(message: Message, session: AsyncSession):
+async def successful_payment_handler(message: Message):
     payment: SuccessfulPayment = message.successful_payment
 
     try:
@@ -30,7 +30,7 @@ async def successful_payment_handler(message: Message, session: AsyncSession):
         return
 
     try:
-        order = await crud.update_order_status(session, order_id, 'paid')
+        order = await crud.update_order_status(order_id, 'paid')
     except SQLAlchemyError as e:
         logger.error(f'❌ Ошибка базы данных при установке статуса "paid" для заказа {order_id}', exc_info=True)
         await message.answer(f'❌ Не удалось обновить статус оплаты. Номер заказа: <b>{order_id}</b>. Свяжитесь с поддержкой.', reply_markup=kb.main_keyboard())
@@ -46,10 +46,10 @@ async def successful_payment_handler(message: Message, session: AsyncSession):
 
 @router.callback_query(F.data.startswith('pay_for_the_order_'))
 @handle_db_errors()
-async def pay_for_the_order(callback: CallbackQuery, session: AsyncSession):
+async def pay_for_the_order(callback: CallbackQuery):
     user_id = callback.from_user.id
     order_id = int(callback.data.split('_')[-1])
-    order = await crud.get_order(session, user_id, order_id)
+    order = await crud.get_order(user_id, order_id)
     logger.info(f'📦 Пользователь {user_id} хочет оплатить заказ №{order.id}.')
 
     await send_order_invoice(callback.bot, callback.message.chat.id, order, PROVIDER_TOKEN)

@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-async def get_catalog(msg: Message|CallbackQuery, session: AsyncSession):
-    categories = await crud.get_categories(session)
+async def get_categories(msg: Message|CallbackQuery):
+    categories = await crud.get_categories()
     text = 'Вот каталог товаров!'
     keyboard = kb.categories_keyboard(categories)
     if isinstance(msg, Message):
@@ -23,13 +23,13 @@ async def get_catalog(msg: Message|CallbackQuery, session: AsyncSession):
 
 @router.message(F.text.in_(['/catalog', '🛍️ Каталог']))
 @handle_db_errors()
-async def show_catalog(message: Message, session: AsyncSession):  
-    await get_catalog(message, session)
+async def show_catalog(message: Message):  
+    await get_categories(message)
     logger.info(f'🛍️ Пользователь {message.from_user.id} вызвал команду /catalog')
 
 
 @router.callback_query(F.data == 'back_to_catalog')
 @handle_db_errors()
-async def back_to_catalog(callback: CallbackQuery, session: AsyncSession):
-    await get_catalog(callback, session)
+async def back_to_catalog(callback: CallbackQuery):
+    await get_categories(callback)
     logger.info(f'🛍️ Пользователь {callback.from_user.id} вернулся в каталог из категории')
