@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select, update
 from typing import List
@@ -7,7 +8,8 @@ import logging
 from db.models import Order, OrderItem, OrderStatus, Address
 from db.cart import get_cart
 from utils.decorators import db_errors, make_async_session
-from exceptions.orders import InvalidOrderTotalPriceError
+from exceptions.orders import InvalidOrderTotalPriceError, OrderNotFound
+from exceptions.order_statuses import OrderStatusNotFound, MultipleOrderStatusesFound
 from exceptions.products import ProductOutOfStockError
 
 
@@ -79,16 +81,14 @@ async def create_order(user_id: int, data: dict, session: AsyncSession) -> Order
     order.total_price = total_price
 
     session.add_all(order_items)
-
     await session.commit()
-
     await session.refresh(order)
     return order
 
 
 @db_errors()
 @make_async_session
-async def get_orders(user_id: int, session: AsyncSession) -> List[Order]:
+async def get_user_orders(user_id: int, session: AsyncSession) -> List[Order]:
     result = await session.execute(
                             select(Order)
                             .where(Order.user_id==user_id)
@@ -100,42 +100,55 @@ async def get_orders(user_id: int, session: AsyncSession) -> List[Order]:
 @db_errors()
 @make_async_session
 async def get_order(user_id: int, order_id: int, session: AsyncSession) -> Order:
-    result = await session.execute(
-                            select(Order)
-                            .where(Order.user_id==user_id, Order.id==order_id)
-                            .options(selectinload(Order.items).selectinload(OrderItem.product))
-                            )
-    return result.scalar_one() 
+    try:
+        result = await session.execute(
+                                select(Order)
+                                .where(Order.user_id==user_id, Order.id==order_id)
+                                .options(selectinload(Order.items).selectinload(OrderItem.product))
+                                )
+        return result.scalar_one() 
+    except NoResultFound:
+        raise OrderNotFound(user_id, order_id)
 
 
 @db_errors()
 @make_async_session
 async def get_status_id(status_code: str, session: AsyncSession) -> int:
-    result = await session.execute(select(OrderStatus.id).filter(OrderStatus.status == status_code))
-    return result.scalar_one()
+    try:
+        result = await session.execute(select(OrderStatus.id).filter(OrderStatus.status == status_code))
+        return result.scalar_one()
+    except NoResultFound:
+        raise OrderStatusNotFound(status_code)
+    except MultipleResultsFound:
+        raise MultipleOrderStatusesFound(status_code)
 
 
 @db_errors()
 @make_async_session
-async def update_order_status(order_id: int, status: str, session: AsyncSession) -> Order:
-    status_id = await get_status_id(status)
+async def update_order_status(user_id: int, order_id: int, status: str, session: AsyncSession) -> Order:
+    try:
+        status_id = await get_status_id(status)
+    except (OrderStatusNotFound, MultipleOrderStatusesFound):
+        raise
 
-    await session.execute(update(Order).where(Order.id == order_id).values(status_id=status_id))
+    await session.execute(
+                    update(Order)
+                    .where(Order.id==order_id, Order.user_id==user_id)
+                    .values(status_id=status_id)
+                    )
     await session.commit()
 
-    result = await session.execute(select(Order).where(Order.id == order_id))
-    return result.scalar_one()
+    try:
+        result = await session.execute(select(Order).where(Order.id==order_id))
+        return result.scalar_one()
+    except NoResultFound:
+        raise OrderNotFound(user_id, order_id)
 
 
 @db_errors()
 @make_async_session
-async def return_cancelled_order_items(order_id: int, session: AsyncSession):
-    result = await session.execute(
-                            select(Order)
-                            .where(Order.id==order_id)
-                            .options(selectinload(Order.items).selectinload(OrderItem.product))
-                            )
-    order = result.scalar_one() 
+async def return_cancelled_order_items(user_id: int, order_id: int, session: AsyncSession):
+    order = await get_order(user_id, order_id)
 
     for item in order.items:
         item.product.quantity_in_stock += item.quantity

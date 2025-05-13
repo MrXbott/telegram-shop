@@ -21,6 +21,7 @@ async def process_pre_checkout_query(pre_checkout_q: PreCheckoutQuery):
 @router.message(F.successful_payment)
 async def successful_payment_handler(message: Message):
     payment: SuccessfulPayment = message.successful_payment
+    user_id = message.from_user.id
 
     try:
         order_id = int(payment.invoice_payload)
@@ -30,7 +31,7 @@ async def successful_payment_handler(message: Message):
         return
 
     try:
-        order = await crud.update_order_status(order_id, 'paid')
+        order = await crud.update_order_status(user_id, order_id, 'paid')
     except SQLAlchemyError as e:
         logger.error(f'❌ Ошибка базы данных при установке статуса "paid" для заказа {order_id}', exc_info=True)
         await message.answer(f'❌ Не удалось обновить статус оплаты. Номер заказа: <b>{order_id}</b>. Свяжитесь с поддержкой.', reply_markup=kb.main_keyboard())

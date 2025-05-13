@@ -28,7 +28,7 @@ from .favorites import (
     )
 from .orders import (
     create_order, 
-    get_orders, 
+    get_user_orders, 
     get_order, 
     get_status_id, 
     update_order_status, 

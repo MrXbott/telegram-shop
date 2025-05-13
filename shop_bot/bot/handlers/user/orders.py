@@ -18,7 +18,7 @@ from exceptions.products import ProductOutOfStockError
 from bot.services.invoices import send_order_invoice
 from bot.tasks import cancel_unpaid_order
 from config import PROVIDER_TOKEN, UNPAID_ORDER_TIMEOUT
-
+from exceptions.orders import OrderNotFound
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -156,7 +156,7 @@ async def place_an_order(callback: CallbackQuery, state: FSMContext):
     
     try:
         order = await crud.create_order(user_id, data)
-        await crud.update_order_status(order.id, 'waiting_for_payment')
+        await crud.update_order_status(user_id, order.id, 'waiting_for_payment')
 
         cancel_unpaid_order.apply_async(args=[user_id, order.id], countdown=UNPAID_ORDER_TIMEOUT)
 
@@ -184,16 +184,19 @@ async def place_an_order(callback: CallbackQuery, state: FSMContext):
 async def show_order(callback: CallbackQuery):
     user_id = callback.from_user.id
     order_id = int(callback.data.split('_')[1])
-    logger.info(f'📦 Пользователь {user_id} хочет просмотреть заказ №{order_id}')
+    logger.info(f'📦 Пользователь {user_id} хочет просмотреть свой заказ №{order_id}')
 
-    order = await crud.get_order(user_id, order_id)
-    if order:
-        await callback.message.edit_text(text=order_text(order, order.items), reply_markup=kb.order_details_keyboard(order)) 
+    try:
+        order = await crud.get_order(user_id, order_id)
+    except OrderNotFound:
+        await callback.message.answer(text='⚠️ Что-то пошло не так. Заказ не найден.') 
+        return
+    await callback.message.edit_text(text=order_text(order, order.items), reply_markup=kb.order_details_keyboard(order)) 
 
 
 async def show_orders(msg: Message|CallbackQuery):
     user_id = msg.from_user.id
-    orders = await crud.get_orders(user_id)
+    orders = await crud.get_user_orders(user_id)
     text = 'Вот ваши заказы: ' if orders else 'У вас пока нет зказов'
     keyboard = kb.orders_keyboard(orders) if orders else None
     if isinstance(msg, Message):
@@ -204,7 +207,7 @@ async def show_orders(msg: Message|CallbackQuery):
 
 @router.message(F.text.in_(['/orders', '📦 Мои заказы']))
 @handle_db_errors()
-async def show_all_orders(message: Message):
+async def show_user_orders(message: Message):
     logger.info(f'📦 Пользователь {message.from_user.id} вызвал команду /orders')
     await show_orders(message)
 
