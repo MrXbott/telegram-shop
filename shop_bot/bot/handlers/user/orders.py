@@ -4,6 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram.exceptions import TelegramBadRequest
 from typing import List
+from decimal import Decimal
 import logging
 
 import bot.keyboards.user_kb as kb
@@ -38,13 +39,10 @@ class PlaceAnOrder(StatesGroup):
 @router.callback_query(F.data == 'details_for_order')
 async def add_order_details(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
-    products: List[ProductInCart] = await cart.get_cart(user_id)
-    total_sum = 0
-    for product in products:
-        total_sum += product.quantity * product.product.price
+    total_sum: Decimal = await cart.get_cart_total_sum(user_id)
     currency_code = 'USD'
     rate: float = await exchange_service.get_exchange_rate(currency_code)
-    payment_amount: int = total_sum * 100
+    payment_amount= int(total_sum * 100)
     try:
         validate_payment_amount(payment_amount, currency_code, rate)
     except TelegramPaymentLimitError as e:

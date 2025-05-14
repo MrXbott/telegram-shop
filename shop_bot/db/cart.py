@@ -1,4 +1,5 @@
 from typing import List
+from decimal import Decimal
 from db.redis import redis_client
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -61,6 +62,14 @@ async def get_cart(user_id: int, session: AsyncSession) -> List[ProductInCart]:
         return []
     products = await crud.get_products_by_ids(product_ids)
     return [ProductInCart(product, items[product.id]) for product in products]
+
+@redis_errors()
+async def get_cart_total_sum(user_id) -> Decimal:
+    products = await get_cart(user_id)
+    total_sum = 0
+    for product in products:
+        total_sum += product.quantity * product.product.price
+    return total_sum
 
 
 async def clear_cart(user_id: int) -> None:
