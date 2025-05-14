@@ -12,12 +12,12 @@
             <li>
                 {{ product.name }} — {{ product.price }} ₽
                 {% if product.image %}
-                    <img src="{{ url_for('media_products', filename=product.image) }}" alt="Product Image" width="50">
+                    <img src="{{ url_for('admin.media_products', filename=product.image) }}" alt="Product Image" width="50">
                 {% endif %}
             </li>
             {% endfor %}
         </ul>
     {% endfor %}
-    <a href="{{ url_for('add_product') }}">➕ Добавить продукт</a>
+    <a href="{{ url_for('admin.add_product') }}">➕ Добавить продукт</a>
 </body>
 </html>

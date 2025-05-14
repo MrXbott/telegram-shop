@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+from flask import current_app, render_template, request, redirect, url_for, send_from_directory
 import os
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import SQLAlchemyError, DataError
@@ -6,28 +6,26 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload, joinedload, raiseload
 from db.models import Product, Category
 from db.init import sync_session
-from config import MEDIA_FOLDER_PATH
-from exceptions.products import NegativeProductPriceError, NegativeProductQuantityError
+from exceptions.db.products import NegativeProductPriceError, NegativeProductQuantityError
 import logging
-# from psycopg2.errors import NumericValueOutOfRange
-# from asyncpg.exceptions import NumericValueOutOfRangeError
 
+from . import routes_bp
 
 logger = logging.getLogger(__name__)
-app = Flask(__name__)
 
 
-@app.route('/media/<path:filename>')
+@routes_bp.route('/media/<path:filename>')
 def media_products(filename):
+    MEDIA_FOLDER_PATH = current_app.config.get('MEDIA_FOLDER_PATH')
     return send_from_directory(MEDIA_FOLDER_PATH, filename)
 
 
-@app.route('/')
+@routes_bp.route('/')
 def index():
-    return redirect(url_for('product_list'))
+    return render_template('index.html')
 
 
-@app.route('/products/')
+@routes_bp.route('/products/')
 def product_list():
     with sync_session() as session:
         stmt = select(Category).order_by(Category.name).options(selectinload(Category.products))
@@ -35,7 +33,7 @@ def product_list():
     return render_template('products.html', categories= categories)
 
 
-@app.route('/products/add/', methods=['GET', 'POST'])
+@routes_bp.route('/products/add/', methods=['GET', 'POST'])
 def add_product():
     with sync_session() as session:
         if request.method == 'POST':
@@ -45,6 +43,7 @@ def add_product():
             if file and file.filename != '':
                 file_name = secure_filename(file.filename)
                 file_path = os.path.join('products/', file_name)
+                MEDIA_FOLDER_PATH = current_app.config.get('MEDIA_FOLDER_PATH')
                 file.save(os.path.join(MEDIA_FOLDER_PATH, 'products', file_name))
 
             try:
@@ -88,11 +87,9 @@ def add_product():
             except Exception as e:
                 return f'{e}', 400
             
-            return redirect(url_for('product_list'))
+            return redirect(url_for('admin.product_list'))
         
         categories = session.query(Category).all()
         return render_template('add_product.html', categories=categories)
 
 
-if __name__ == '__main__':
-    app.run(debug=True)

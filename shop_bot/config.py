@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+PYTHONPATH = os.getenv('PYTHONPATH', '.')
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
