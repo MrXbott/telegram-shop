@@ -1,9 +1,13 @@
 from aiogram.types import LabeledPrice
 from aiogram import Bot
+import logging
 
 from db.models import Order
 
+logger = logging.getLogger(__name__)
+
 async def send_order_invoice(bot: Bot, chat_id: int, order: Order, provider_token: str) -> None:
+    logger.info('ℹ️ Отправка инвойса')
     await bot.send_invoice(
                 chat_id=chat_id,
                 title=f'Заказ №{order.id}',

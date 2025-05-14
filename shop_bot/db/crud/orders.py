@@ -8,9 +8,9 @@ import logging
 from db.models import Order, OrderItem, OrderStatus, Address
 from db.cart import get_cart
 from utils.decorators import db_errors, make_async_session
-from exceptions.orders import InvalidOrderTotalPriceError, OrderNotFound
-from exceptions.order_statuses import OrderStatusNotFound, MultipleOrderStatusesFound
-from exceptions.products import ProductOutOfStockError
+from exceptions.db.orders import InvalidOrderTotalPriceError, OrderNotFound
+from exceptions.db.order_statuses import OrderStatusNotFound, MultipleOrderStatusesFound
+from exceptions.db.products import ProductOutOfStockError
 
 
 logger = logging.getLogger(__name__)

@@ -1,9 +1,8 @@
 from aiogram import Router, F
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove, LabeledPrice
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram.exceptions import TelegramBadRequest
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 import logging
 
@@ -14,14 +13,17 @@ from db.cart import ProductInCart
 from utils.decorators import handle_db_errors
 from utils.validators import is_valid_phone, normalize_phone, is_valid_name, is_valid_address
 from bot.texts import order_text
-from exceptions.products import ProductOutOfStockError
+from exceptions.db.products import ProductOutOfStockError
 from bot.services.invoices import send_order_invoice
 from bot.tasks import cancel_unpaid_order
 from config import PROVIDER_TOKEN, UNPAID_ORDER_TIMEOUT
-from exceptions.orders import OrderNotFound
+from exceptions.db.orders import OrderNotFound
+from bot.services.exchange import ExchangeRateService, validate_payment_amount
+from exceptions.bot.payments import TelegramPaymentLimitError
 
 logger = logging.getLogger(__name__)
 router = Router()
+exchange_service = ExchangeRateService()
 
 
 class PlaceAnOrder(StatesGroup):
@@ -36,6 +38,20 @@ class PlaceAnOrder(StatesGroup):
 @router.callback_query(F.data == 'details_for_order')
 async def add_order_details(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
+    products: List[ProductInCart] = await cart.get_cart(user_id)
+    total_sum = 0
+    for product in products:
+        total_sum += product.quantity * product.product.price
+    currency_code = 'USD'
+    rate: float = await exchange_service.get_exchange_rate(currency_code)
+    payment_amount: int = total_sum * 100
+    try:
+        validate_payment_amount(payment_amount, currency_code, rate)
+    except TelegramPaymentLimitError as e:
+        logger.error(f'❌ {str(e)}', exc_info=True)
+        await callback.message.answer(f'❌ Невозможно оформить заказ: мин. сумма {e.min_amount} - макс. сумма {e.max_amount}')
+        return
+    
     addresses = await crud.get_user_addresses(user_id)
     logger.info(f'📦 Пользователь {user_id} начал оформлять заказ.')
     if addresses:
@@ -149,11 +165,12 @@ async def place_an_order(callback: CallbackQuery, state: FSMContext):
 
     # to do: check data 
     data = await state.get_data()
+
     products: List[ProductInCart] = await cart.get_cart(user_id)
     if not products:
         await callback.answer('⚠️🛒 Невозможно оформить заказ: ваша корзина пуста.')
         return
-    
+
     try:
         order = await crud.create_order(user_id, data)
         await crud.update_order_status(user_id, order.id, 'waiting_for_payment')
@@ -166,6 +183,7 @@ async def place_an_order(callback: CallbackQuery, state: FSMContext):
         
         await state.clear()
         await callback.message.delete_reply_markup()
+
         logger.info(f'✅📦 Пользователь {user_id} оформил заказ №{order.id} и получил счёт на оплату.')
 
     except ProductOutOfStockError as e:
