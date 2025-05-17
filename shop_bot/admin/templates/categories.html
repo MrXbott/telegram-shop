@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Категории</title>
+</head>
+<body>
+    <h1>Список категорий</h1>
+        <ul>
+            {% for category in categories %}
+            <li>
+                {{ category.name }} 
+            </li>
+            {% endfor %}
+        </ul>
+    <a href="{{ url_for('admin.add_category') }}">➕ Добавить категорию</a>
+</body>
+</html>
