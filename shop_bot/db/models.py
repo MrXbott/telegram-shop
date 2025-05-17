@@ -19,7 +19,7 @@ class Category(Base):
     __tablename__ = 'categories'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
 
     products: Mapped[list['Product']] = relationship(back_populates='category', order_by='Product.name')
     
