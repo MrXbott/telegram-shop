@@ -8,6 +8,16 @@ class Base(DeclarativeBase):
     pass
 
 
+class Admin(Base):
+    __tablename__ = 'admins'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
+    password: Mapped[str] = mapped_column(String(256), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
 class User(Base):
     __tablename__ = 'users'
 
