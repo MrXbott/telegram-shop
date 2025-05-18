@@ -1,14 +1,14 @@
-from flask import current_app, render_template, request, redirect, url_for, send_from_directory
-import os
+from flask import current_app, render_template, request, redirect, url_for
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import SQLAlchemyError, DataError
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload, joinedload, raiseload
+from sqlalchemy.orm import selectinload
+import os
+import logging
+
 from db.models import Product, Category
 from db.init import sync_session
 from exceptions.db.products import NegativeProductPriceError, NegativeProductQuantityError
-import logging
-
 from . import routes_bp
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,6 @@ def product_list():
         stmt = select(Category).order_by(Category.name).options(selectinload(Category.products))
         categories = session.scalars(stmt).all()
     return render_template('products.html', categories=categories)
-
 
 @routes_bp.route('/products/add/', methods=['GET', 'POST'])
 def add_product():

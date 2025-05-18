@@ -4,11 +4,14 @@
     <title>Админка</title>
 </head>
 <body>
+    
     <a href="{{ url_for('admin.user_list') }}">Юзеры</a>
     <br>
     <a href="{{ url_for('admin.product_list') }}">Продукты</a>
     <br>
     <a href="{{ url_for('admin.category_list') }}">Категории</a>
     <br>
+    <br>
+    <a href="{{ url_for('admin.logout') }}">Logout</a>
 </body>
 </html>

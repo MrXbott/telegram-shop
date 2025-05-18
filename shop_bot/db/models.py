@@ -2,13 +2,14 @@ from sqlalchemy import Integer, String, ForeignKey, Boolean, DateTime, Numeric, 
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column, validates
 from typing import List
 from datetime import datetime
+from flask_login import UserMixin
 
 
 class Base(DeclarativeBase): 
     pass
 
 
-class Admin(Base):
+class Admin(Base, UserMixin):
     __tablename__ = 'admins'
 
     id: Mapped[int] = mapped_column(primary_key=True)
