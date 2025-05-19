@@ -10,6 +10,9 @@ abs_path = os.path.abspath('.')
 if abs_path not in sys.path:
     sys.path.insert(0, abs_path)
 
+from logging_config import setup_logging
+setup_logging()
+
 def create_app(config_name):
     app = Flask(__name__)
     app.config.from_object(config[config_name])

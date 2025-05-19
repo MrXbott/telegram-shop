@@ -15,5 +15,5 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
 
 # sync
-sync_engine = create_engine(config('POSTGRES_URL_SYNC'), echo=True)
+sync_engine = create_engine(config('POSTGRES_URL_SYNC'), echo=False)
 sync_session = sessionmaker(bind=sync_engine, expire_on_commit=False)

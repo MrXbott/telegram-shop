@@ -10,8 +10,10 @@ logger = logging.getLogger(__name__)
 
 @routes_bp.route('/users/')
 def user_list():
+    logger.info('🔎 Запрошен список пользователей.')
     with sync_session() as session:
         stmt = select(User).order_by(User.id)
         users = session.scalars(stmt).all()
+        logger.debug(f'📦 Получено {len(users)} пользователей из базы.')
     return render_template('users.html', users=users)
 
