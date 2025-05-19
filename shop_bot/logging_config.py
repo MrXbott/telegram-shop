@@ -6,7 +6,7 @@ LOG_DIR = 'logs'
 BOT_LOG_FILE = 'bot.log'
 ADMIN_LOG_FILE = 'admin.log'
 
-def setup_logging(level=logging.DEBUG):
+def setup_logging(level=logging.INFO):
     os.makedirs(LOG_DIR, exist_ok=True)
 
     log_format = '%(asctime)s | %(levelname)-8s | %(name)s | %(message)s'
