@@ -49,3 +49,5 @@ def setup_logging(level=logging.DEBUG):
     logging.getLogger('aiogram').setLevel(logging.WARNING)
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     logging.getLogger('httpx').setLevel(logging.WARNING)
+    logging.getLogger('fsevents').setLevel(logging.WARNING)
+    
