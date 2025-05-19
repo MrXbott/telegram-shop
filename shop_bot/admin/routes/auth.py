@@ -8,6 +8,7 @@ from . import routes_bp
 from db.models import Admin
 from db.init import sync_session
 from forms.passwords import ChangePasswordForm
+from forms.login import LoginForm
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,8 @@ def login():
         logger.debug(f'👤 Пользователь уже аутентифицирован: {current_user.username}')
         return redirect(url_for('admin.admin_main'))  
     
-    if request.method == 'POST':
+    form = LoginForm()
+    if form.validate_on_submit():
         with sync_session() as session:
             admin = session.scalar(select(Admin).where(Admin.username==request.form['username']))
             if admin and check_password_hash(admin.password, request.form['password']) and admin.is_active:
@@ -27,7 +29,7 @@ def login():
             
             logger.warning(f'❌ Неудачная попытка входа: {admin.username}')
             flash('Неправильные логин или пароль')
-    return render_template('login.html')
+    return render_template('login.html', form=form)
 
 @routes_bp.route('/logout')
 def logout():
