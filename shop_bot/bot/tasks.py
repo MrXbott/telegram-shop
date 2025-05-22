@@ -4,7 +4,7 @@ import logging
 
 from bot.celery_app import celery_app
 from db.models import Order, OrderItem, OrderStatus
-from bot.keyboards import user_kb as kb
+import bot.keyboards as kb
 from config import BOT_TOKEN, POSTGRES_URL
 
 
@@ -67,7 +67,7 @@ def cancel_unpaid_order(user_id: int, order_id: int):
                     await session.commit()
                     logger.info(f'✅❌ Заказ №{order.id} успешно отменён и товары возвращены на склад.')
 
-                    await bot.send_message(user_id, f'❌ Ваш заказ №{order_id} был автоматически отменён из-за отсутствия оплаты.', reply_markup=kb.main_keyboard())
+                    await bot.send_message(user_id, f'❌ Ваш заказ №{order_id} был автоматически отменён из-за отсутствия оплаты.', reply_markup=kb.menu_keyboard())
                 else:
                     logger.info(f'ℹ️ Заказ {order.id} не в статусе ожидания оплаты. Пропуск.')
         except Exception as e:
