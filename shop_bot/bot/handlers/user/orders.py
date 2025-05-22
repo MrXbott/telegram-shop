@@ -209,26 +209,30 @@ async def show_order(callback: CallbackQuery):
         return
     await callback.message.edit_text(text=order_text(order, order.items), reply_markup=kb.order_details_keyboard(order)) 
 
+@router.callback_query(F.data.startswith('orderspage_'))
+async def paginate_orders(callback: CallbackQuery):
+    page_number = int(callback.data.split('_')[-1])
+    await show_orders(callback, page_number)
 
-async def show_orders(msg: Message|CallbackQuery):
+async def show_orders(msg: Message|CallbackQuery, page_number):
     user_id = msg.from_user.id
+    orders_per_page = 5
     orders = await crud.get_user_orders(user_id)
     text = 'Вот ваши заказы: ' if orders else 'У вас пока нет зказов'
-    keyboard = kb.orders_keyboard(orders) if orders else None
+    keyboard = kb.orders_keyboard(orders, page_number, orders_per_page) if orders else None
     if isinstance(msg, Message):
         await msg.answer(text, reply_markup=keyboard)
     else:
         await msg.message.edit_text(text, reply_markup=keyboard)
-
+    logger.info(f'📦 Показана {page_number} страница списка заказов юзера {user_id}')
 
 @router.message(F.text.in_(['/orders', '📦 Мои заказы']))
 @handle_db_errors()
 async def show_user_orders(message: Message):
     logger.info(f'📦 Пользователь {message.from_user.id} вызвал команду /orders')
-    await show_orders(message)
-
+    await show_orders(message, page_number=1)
 
 @router.callback_query(F.data == 'back_to_orders')
 async def back_to_orders(callback: CallbackQuery):
     logger.info(f'📦 Пользователь {callback.from_user.id} вернулся к списку заказов')
-    await show_orders(callback)
+    await show_orders(callback, page_number=1)
