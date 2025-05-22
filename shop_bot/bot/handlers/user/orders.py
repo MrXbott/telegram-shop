@@ -7,7 +7,7 @@ from typing import List
 from decimal import Decimal
 import logging
 
-import bot.keyboards.user_kb as kb
+import bot.keyboards as kb
 from bot.keyboards.addresses import choosing_address_keyboard
 from db import crud, cart
 from db.cart import ProductInCart

@@ -1,16 +1,13 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-import bot.keyboards.user_kb as kb
+import bot.keyboards as kb
 from db import crud, cart
 from utils.decorators import handle_db_errors
 
-
 logger = logging.getLogger(__name__)
 router = Router()
-
 
 @router.callback_query(F.data.startswith('favorites_'))
 @handle_db_errors()

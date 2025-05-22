@@ -1,15 +1,13 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-import bot.keyboards.user_kb as kb
+import bot.keyboards as kb
 from db import crud
 from utils.decorators import handle_db_errors
 
 logger = logging.getLogger(__name__)
 router = Router()
-
 
 async def get_categories(msg: Message|CallbackQuery):
     categories = await crud.get_categories()
@@ -20,13 +18,11 @@ async def get_categories(msg: Message|CallbackQuery):
     else:
         await msg.message.edit_text(text, reply_markup=keyboard)
 
-
 @router.message(F.text.in_(['/catalog', '🛍️ Каталог']))
 @handle_db_errors()
 async def show_catalog(message: Message):  
     await get_categories(message)
     logger.info(f'🛍️ Пользователь {message.from_user.id} вызвал команду /catalog')
-
 
 @router.callback_query(F.data == 'back_to_catalog')
 @handle_db_errors()

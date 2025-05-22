@@ -1,11 +1,10 @@
 from aiogram.types import Message, CallbackQuery, PreCheckoutQuery, SuccessfulPayment, LabeledPrice
 from aiogram import Router, F
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 import logging
 
 from db import crud
-from bot.keyboards import user_kb as kb
+import bot.keyboards as kb
 from bot.texts import successful_payment_text
 from utils.decorators import handle_db_errors
 from bot.services.invoices import send_order_invoice
@@ -27,22 +26,22 @@ async def successful_payment_handler(message: Message):
         order_id = int(payment.invoice_payload)
     except ValueError as e:
         logger.error(f'❌ Невозможно преобразовать payload в order_id: {payment.invoice_payload}', exc_info=True)
-        await message.answer('⚠️ Не удалось обработать номер заказа. Свяжитесь с поддержкой.', reply_markup=kb.main_keyboard())
+        await message.answer('⚠️ Не удалось обработать номер заказа. Свяжитесь с поддержкой.', reply_markup=kb.menu_keyboard())
         return
 
     try:
         order = await crud.update_order_status(user_id, order_id, 'paid')
     except SQLAlchemyError as e:
         logger.error(f'❌ Ошибка базы данных при установке статуса "paid" для заказа {order_id}', exc_info=True)
-        await message.answer(f'❌ Не удалось обновить статус оплаты. Номер заказа: <b>{order_id}</b>. Свяжитесь с поддержкой.', reply_markup=kb.main_keyboard())
+        await message.answer(f'❌ Не удалось обновить статус оплаты. Номер заказа: <b>{order_id}</b>. Свяжитесь с поддержкой.', reply_markup=kb.menu_keyboard())
         return
     except Exception as e:
         logger.error(f'❌ Неизвестная ошибка при обработке оплаты заказа {order_id}: {e}', exc_info=True)
-        await message.answer(f'⚠️ Произошла непредвиденная ошибка. Номер заказа: <b>{order_id}</b>', reply_markup=kb.main_keyboard())
+        await message.answer(f'⚠️ Произошла непредвиденная ошибка. Номер заказа: <b>{order_id}</b>', reply_markup=kb.menu_keyboard())
         return
     
     logger.info(f'✅ Оплата заказа № {order_id} прошла успешно!')
-    await message.answer(text=successful_payment_text(payment, order), reply_markup=kb.main_keyboard())
+    await message.answer(text=successful_payment_text(payment, order), reply_markup=kb.menu_keyboard())
 
 
 @router.callback_query(F.data.startswith('pay_for_the_order_'))

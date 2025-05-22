@@ -4,7 +4,6 @@ from aiogram.client.default import DefaultBotProperties
 from decouple import config
 
 from bot.handlers import user
-from bot.handlers.admin import admin
 from db.init import init_db, async_session_maker
 # from bot.middlewares.session import DBSessionMiddleware
 from bot.middlewares.error_logging import ErrorLoggingMiddleware
@@ -22,7 +21,6 @@ async def main():
     # dp.update.middleware(DBSessionMiddleware(async_session_maker))
     dp.update.middleware(ErrorLoggingMiddleware())
 
-    dp.include_routers(admin.router)
     for router in user.routers:
         dp.include_router(router)
 

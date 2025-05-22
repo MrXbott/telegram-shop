@@ -1,17 +1,14 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-import bot.keyboards.user_kb as kb
+import bot.keyboards as kb
 from bot.texts import cart_text
 from db import crud, cart
 from utils.decorators import handle_db_errors
 
-
 logger = logging.getLogger(__name__)
 router = Router()
-
 
 @router.message(F.text.in_(['/cart', '🛒 Корзина']))
 @handle_db_errors()
@@ -22,8 +19,7 @@ async def show_cart(message: Message):
         await message.answer('Корзина пуста.')
         return
     await message.answer(cart_text(products), reply_markup=kb.cart_keyboard())
-
-    
+ 
 @router.callback_query(F.data.startswith('add_'))
 @handle_db_errors()
 async def add_product_to_cart(callback: CallbackQuery):
@@ -37,8 +33,6 @@ async def add_product_to_cart(callback: CallbackQuery):
         await cart.add_to_cart(user_id, product_id, quantity)
         await callback.message.edit_reply_markup(reply_markup=kb.product_keyboard(product, is_favorite, quantity))
         await callback.answer('Добавлено в корзину')
-    
-    
 
 @router.callback_query(F.data.startswith('increase_'))
 @handle_db_errors()
@@ -58,7 +52,6 @@ async def increase_product_quantity(callback: CallbackQuery):
     await callback.answer()
     logger.info(f'🔺 Пользователь {callback.from_user.id} увеличил количество продукта {product_id}: {quantity} -> {new_quantity}')
 
-
 @router.callback_query(F.data.startswith('decrease_'))
 @handle_db_errors()
 async def decrease_product_quantity(callback: CallbackQuery):
@@ -73,7 +66,6 @@ async def decrease_product_quantity(callback: CallbackQuery):
     await callback.answer()
     logger.info(f'🔻 Пользователь {callback.from_user.id} уменьшил количество продукта {product_id}: {quantity} -> {new_quantity}')
 
-
 @router.callback_query(F.data.startswith('remove_'))
 @handle_db_errors()
 async def remove_product_from_cart(callback: CallbackQuery):
@@ -87,13 +79,11 @@ async def remove_product_from_cart(callback: CallbackQuery):
     await callback.answer('Удалено из корзины!')
     logger.info(f'📤 Пользователь {callback.from_user.id} удалил из корзины продукт {product_id}')
 
-
 @router.callback_query(F.data == 'ignore')
 @handle_db_errors()
 async def ignore_callback(callback: CallbackQuery):
     await callback.answer()
     logger.info(f'Пользователь {callback.from_user.id} нажал кнопку с количеством')
-
 
 @router.callback_query(F.data == 'clear_cart')
 @handle_db_errors()

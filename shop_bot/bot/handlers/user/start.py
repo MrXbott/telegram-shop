@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-import bot.keyboards.user_kb as kb
+import bot.keyboards as kb
 from db import crud
 from utils.decorators import handle_db_errors
 
@@ -16,4 +16,4 @@ router = Router()
 async def start(message: Message):
     logger.info(f'Пользователь {message.from_user.id} вызвал команду /start')
     await crud.get_or_create_user(message.from_user.id, message.from_user.full_name)
-    await message.answer('Добро пожаловать в магазин!', reply_markup=kb.main_keyboard())
+    await message.answer('Добро пожаловать в магазин!', reply_markup=kb.menu_keyboard())

@@ -2,10 +2,9 @@ from aiogram import Router, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery
-from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-import bot.keyboards.addresses as kb
+import bot.keyboards as kb
 from db import crud
 from db.models import Address
 from utils.validators import is_valid_address

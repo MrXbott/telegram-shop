@@ -1,11 +1,10 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InputMediaPhoto, FSInputFile, ContentType
 import os
-from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
 from config import MEDIA_FOLDER_PATH
-import bot.keyboards.user_kb as kb
+import bot.keyboards as kb
 from bot.texts import product_text
 from db import crud, cart
 from db.models import Product, Category
